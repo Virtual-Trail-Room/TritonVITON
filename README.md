@@ -7,7 +7,7 @@ First, run the development server:
 ```bash
 npm run dev [for front-end and back-end]
 
-uvicorn main:app -- reload [for Python back-end portion]
+uvicorn main:app --reload [for Python back-end portion]
 
 ```
 
