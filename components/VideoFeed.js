@@ -16,13 +16,15 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const globalCursorRef = useRef(null);
+  // Store the last known cursor position; default is center
+  const lastCursorPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const [handLandmarker, setHandLandmarker] = useState(null);
   const [webcamOn, setWebcamOn] = useState(false);
   const PINCH_DISTANCE_THRESHOLD = 0.05; // normalized units
-  const CLICK_DEBOUNCE = 1000; // milliseconds
+  const CLICK_DEBOUNCE = 1000; // ms between simulated clicks
   let lastClickTime = 0;
 
-  // --- Model Initialization ---
+  // --- Initialize HandLandmarker ---
   useEffect(() => {
     if (!videoRef.current) return;
     async function createLandmarker() {
@@ -39,7 +41,7 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
           runningMode: "VIDEO",
           numHands: 1,
         });
-        console.log("HandLandmarker loaded in VideoFeed.");
+        console.log("HandLandmarker loaded.");
         setHandLandmarker(model);
       } catch (error) {
         console.error("Error creating HandLandmarker:", error);
@@ -58,7 +60,7 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
           videoRef.current.onloadedmetadata = () => {
             videoRef.current.play();
           };
-          console.log("Webcam stream acquired in VideoFeed.");
+          console.log("Webcam stream acquired.");
         }
       } catch (error) {
         console.error("Error accessing webcam:", error);
@@ -70,11 +72,12 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
     }
   }, [webcamOn]);
 
-  // --- Set Default Global Cursor ---
+  // --- Initialize Global Cursor (Default Position at Center) ---
   useEffect(() => {
     if (globalCursorRef.current) {
-      globalCursorRef.current.style.left = `${window.innerWidth / 2}px`;
-      globalCursorRef.current.style.top = `${window.innerHeight / 2}px`;
+      const pos = lastCursorPosRef.current;
+      globalCursorRef.current.style.left = `${pos.x}px`;
+      globalCursorRef.current.style.top = `${pos.y}px`;
       globalCursorRef.current.style.backgroundColor = "red";
       globalCursorRef.current.style.width = "20px";
       globalCursorRef.current.style.height = "20px";
@@ -96,6 +99,7 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
         return;
       }
       const { videoWidth, videoHeight, currentTime } = video;
+      // Ensure video dimensions are valid
       if (videoWidth === 0 || videoHeight === 0) {
         requestAnimationFrame(processFrame);
         return;
@@ -112,9 +116,12 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           if (results.landmarks && results.landmarks.length > 0) {
             results.landmarks.forEach((landmarks) => {
-              // Draw hand landmarks using global functions attached via CDN
+              // Draw hand landmarks using global functions (loaded via CDN)
               if (window.drawConnectors && window.drawLandmarks) {
-                window.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 2 });
+                window.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, {
+                  color: "#00FF00",
+                  lineWidth: 2,
+                });
                 window.drawLandmarks(ctx, landmarks, { color: "#FF0000", lineWidth: 1 });
               } else {
                 console.warn("Drawing utilities not available on window.");
@@ -123,17 +130,20 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
               const indexTip = landmarks[8];
               const globalX = indexTip.x * window.innerWidth;
               const globalY = indexTip.y * window.innerHeight;
+              // Update last known position
+              lastCursorPosRef.current = { x: globalX, y: globalY };
               if (globalCursorRef.current) {
                 globalCursorRef.current.style.left = `${globalX}px`;
                 globalCursorRef.current.style.top = `${globalY}px`;
               }
-              // Call onCursorUpdate callback
               if (onCursorUpdate) onCursorUpdate({ x: globalX, y: globalY });
-              // Pinch gesture detection for simulated click
+              console.log("Detected landmarks:", landmarks);
+              // --- Pinch Gesture Detection for Simulated Click ---
               const thumbTip = landmarks[4];
               const dx = thumbTip.x - indexTip.x;
               const dy = thumbTip.y - indexTip.y;
               const pinchDistance = Math.sqrt(dx * dx + dy * dy);
+              console.log("Pinch Distance:", pinchDistance);
               const now = Date.now();
               if (pinchDistance < PINCH_DISTANCE_THRESHOLD && now - lastClickTime > CLICK_DEBOUNCE) {
                 const el = document.elementFromPoint(globalX, globalY);
@@ -150,13 +160,10 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
                   }, 200);
                 }
               }
-              console.log("Detected landmarks:", landmarks);
             });
           } else {
-            // Draw message if no hand is detected
-            ctx.font = "24px Arial";
-            ctx.fillStyle = "rgba(255,255,255,0.8)";
-            ctx.fillText("No hand detected", 10, 30);
+            // No hand detected: leave the cursor at last known position
+            console.log("No hand detected. Cursor remains at:", lastCursorPosRef.current);
           }
         } catch (error) {
           console.error("Error during detection:", error);
@@ -182,6 +189,7 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
       />
       <canvas ref={canvasRef} className="absolute top-0 left-0 w-full h-full pointer-events-none" />
       <div
+        id="globalCursor"
         ref={globalCursorRef}
         className="fixed w-5 h-5 bg-red-500 border-2 border-yellow-300 rounded-full pointer-events-none"
         style={{ transform: "translate(-50%, -50%)", zIndex: 9999 }}
