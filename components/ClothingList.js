@@ -1,7 +1,11 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 
+<<<<<<< HEAD
 export default function ClothingList({ selectedCategory, cursor }) {
+=======
+export default function ClothingList({ selectedCategory }) {
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
   const [clothingItems, setClothingItems] = useState([]);
   const containerRef = useRef(null);
   const prevY = useRef(null);
@@ -21,10 +25,15 @@ export default function ClothingList({ selectedCategory, cursor }) {
     fetchClothing();
   }, []);
 
+<<<<<<< HEAD
+=======
+  // Filter items by the selected category.
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
   const filteredItems = clothingItems.filter(
     (item) => item.category === selectedCategory
   );
 
+<<<<<<< HEAD
   // When dragging is active, update scrollTop based on vertical movement.
   useEffect(() => {
     if (containerRef.current && cursor && cursor.dragging) {
@@ -51,6 +60,10 @@ export default function ClothingList({ selectedCategory, cursor }) {
 
   return (
     <div ref={containerRef} className="p-6 h-full overflow-y-auto">
+=======
+  return (
+    <div className="p-6 h-full overflow-y-auto">
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
       <h2 className="text-2xl font-bold mb-6">
         Clothing Pieces: {selectedCategory}
       </h2>
@@ -61,6 +74,7 @@ export default function ClothingList({ selectedCategory, cursor }) {
           {filteredItems.map((item) => (
             <li
               key={item._id}
+<<<<<<< HEAD
               className="w-full p-3 bg-gray-800 rounded hover:bg-gray-700 transition-colors text-white"
             >
               <div className="flex flex-col items-center">
@@ -72,6 +86,17 @@ export default function ClothingList({ selectedCategory, cursor }) {
                   className="w-full h-auto rounded"
                 />
               </div>
+=======
+              className="p-3 bg-gray-800 rounded hover:bg-gray-700 transition-colors text-white"
+            >
+              <h3>{item.clothingID}</h3>
+              <p>{item.gender}</p>
+              <img
+                src={item.image2D}
+                alt={item.clothingID}
+                className="w-full h-auto rounded"
+              />
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
             </li>
           ))}
         </ul>

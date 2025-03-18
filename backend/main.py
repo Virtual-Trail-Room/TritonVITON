@@ -21,7 +21,11 @@ async def test_endpoint():
 
 # Load YOLO Pose Model
 try:
+<<<<<<< HEAD
     model = YOLO("yolo11n-pose.pt")
+=======
+    model = YOLO("yolo11s-pose.pt")
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
     print("YOLO Pose Model loaded successfully.")
 except Exception as e:
     print("Error loading YOLO Pose Model:", e)

@@ -97,7 +97,11 @@ export default function AddClothingItem() {
         <input
           type="text"
           name="gender"
+<<<<<<< HEAD
           placeholder="Gender (male, female, nonbinary, all gender)"
+=======
+          placeholder="Gender (male, female, nonbinary)"
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
           value={formData.gender}
           onChange={handleChange}
         />

@@ -10,6 +10,7 @@ pycocotools
 fastapi
 uvicorn
 ultralytics
+<<<<<<< HEAD
 huggingface-hub
 einops
 omegaconf
@@ -31,3 +32,5 @@ xformers
 Ninja
 git+https://github.com/NVlabs/nvdiffrast/
 onnxruntime
+=======
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))

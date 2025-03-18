@@ -12,7 +12,11 @@ const HAND_CONNECTIONS = [
   [0, 17],
 ];
 
+<<<<<<< HEAD
 // --- YOLO Pose Skeleton Connections (unchanged) ---
+=======
+// --- YOLO Pose Skeleton Connections ---
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
 const SKELETON_CONNECTIONS = [
   [1, 2], [1, 3], [2, 4], [3, 5],
   [6, 7], [6, 8], [7, 9], [8, 10], [9, 11],
@@ -20,15 +24,19 @@ const SKELETON_CONNECTIONS = [
   [6, 12], [7, 13],
 ];
 
+<<<<<<< HEAD
 // Thresholds for gestures
 const CLICK_GESTURE_THRESHOLD = 0.05; // distance threshold for click gesture
 const FIST_GESTURE_THRESHOLD = 0.1;   // average distance threshold for fist (drag) gesture
 
+=======
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
 export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
   const videoRef = useRef(null);
   const canvasHandRef = useRef(null);
   const canvasYoloRef = useRef(null);
   const globalCursorRef = useRef(null);
+<<<<<<< HEAD
   // Store the last detected cursor position
   // Initialize with safe defaults
   const lastCursorPosRef = useRef({ x: 0, y: 0 });
@@ -38,13 +46,21 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
     lastCursorPosRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
   }, []);
 
+=======
+  const lastCursorPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
   const yoloKeypointsRef = useRef(null);
 
   const [handLandmarker, setHandLandmarker] = useState(null);
   const [webcamOn, setWebcamOn] = useState(false);
 
+<<<<<<< HEAD
   // Gesture thresholds for click debounce
   const CLICK_DEBOUNCE = 1000; // ms
+=======
+  const PINCH_DISTANCE_THRESHOLD = 0.05; // normalized units
+  const CLICK_DEBOUNCE = 1000; // ms between simulated clicks
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
   const lastClickTimeRef = useRef(0);
 
   // --- Initialize HandLandmarker ---
@@ -93,6 +109,7 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
     }
   }, [webcamOn]);
 
+<<<<<<< HEAD
   // --- Initialize Global Cursor with custom PNGs ---
   useEffect(() => {
     if (globalCursorRef.current) {
@@ -114,6 +131,28 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
   }, []);
 
   // --- Hand Detection Loop ---
+=======
+  // --- Initialize Global Cursor Styling ---
+  useEffect(() => {
+    if (globalCursorRef.current) {
+      Object.assign(globalCursorRef.current.style, {
+        left: `${lastCursorPosRef.current.x}px`,
+        top: `${lastCursorPosRef.current.y}px`,
+        backgroundColor: "red",
+        width: "20px",
+        height: "20px",
+        position: "fixed",
+        zIndex: "30",
+        border: "2px solid yellow",
+        borderRadius: "50%",
+        transform: "translate(-50%, -50%)",
+      });
+      console.log("Global cursor initialized at center.");
+    }
+  }, []);
+
+  // --- Hand Detection Loop (drawn on canvasHandRef) ---
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
   useEffect(() => {
     async function processHandFrame() {
       const video = videoRef.current;
@@ -138,13 +177,17 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
           const handResults = await handLandmarker.detectForVideo(video, startTimeMs);
           if (handResults.landmarks && handResults.landmarks.length > 0) {
             handResults.landmarks.forEach((landmarks) => {
+<<<<<<< HEAD
               // Draw hand landmarks if drawing utilities are available.
+=======
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
               if (window.drawConnectors && window.drawLandmarks) {
                 window.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 2 });
                 window.drawLandmarks(ctx, landmarks, { color: "#FF0000", lineWidth: 1 });
               } else {
                 console.warn("Drawing utilities not available on window.");
               }
+<<<<<<< HEAD
 
               // Calculate palm center using landmarks 0,5,9,13,17.
               const palmIndices = [0, 5, 9, 13, 17];
@@ -157,12 +200,18 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
               const palmCenterY = sumY / palmIndices.length;
               const globalX = palmCenterX * window.innerWidth;
               const globalY = palmCenterY * window.innerHeight;
+=======
+              const indexTip = landmarks[8];
+              const globalX = indexTip.x * window.innerWidth;
+              const globalY = indexTip.y * window.innerHeight;
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
               lastCursorPosRef.current = { x: globalX, y: globalY };
 
               if (globalCursorRef.current) {
                 globalCursorRef.current.style.left = `${globalX}px`;
                 globalCursorRef.current.style.top = `${globalY}px`;
               }
+<<<<<<< HEAD
 
               // Compute distances for click gesture: thumb tip (4), index tip (8), middle tip (12).
               const thumbTip = landmarks[4];
@@ -211,6 +260,24 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
                     globalCursorRef.current.style.backgroundImage = "url('/cursor-hover.png')";
                   }
                 }, 200);
+=======
+              if (onCursorUpdate) onCursorUpdate({ x: globalX, y: globalY });
+              const thumbTip = landmarks[4];
+              const dx = thumbTip.x - indexTip.x;
+              const dy = thumbTip.y - indexTip.y;
+              const pinchDistance = Math.sqrt(dx * dx + dy * dy);
+              const now = Date.now();
+              if (pinchDistance < PINCH_DISTANCE_THRESHOLD && now - lastClickTimeRef.current > CLICK_DEBOUNCE) {
+                const el = document.elementFromPoint(globalX, globalY);
+                if (el && onSimulatedClick) onSimulatedClick(el);
+                lastClickTimeRef.current = now;
+                if (globalCursorRef.current) {
+                  globalCursorRef.current.style.backgroundColor = "green";
+                  setTimeout(() => {
+                    if (globalCursorRef.current) globalCursorRef.current.style.backgroundColor = "red";
+                  }, 200);
+                }
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
               }
             });
           } else {
@@ -227,7 +294,11 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
     }
   }, [handLandmarker, webcamOn, onCursorUpdate, onSimulatedClick]);
 
+<<<<<<< HEAD
   // --- YOLO Backend Polling & Skeleton Drawing ---
+=======
+  // --- YOLO Backend Polling (update yoloKeypointsRef) ---
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
   useEffect(() => {
     if (webcamOn) {
       const intervalId = setInterval(() => {
@@ -260,7 +331,10 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
               yoloKeypointsRef.current = keypoints;
             } else {
               yoloKeypointsRef.current = null;
+<<<<<<< HEAD
               console.log("No YOLO keypoints detected.");
+=======
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
             }
           } catch (error) {
             console.error("Error sending frame to YOLO backend:", error);
@@ -271,6 +345,10 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
     }
   }, [webcamOn]);
 
+<<<<<<< HEAD
+=======
+  // --- YOLO Skeleton Drawing Loop (drawn on canvasYoloRef) ---
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
   useEffect(() => {
     function isValidKp(kp) {
       return kp[0] !== 0 || kp[1] !== 0;
@@ -335,6 +413,10 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
 
   return (
     <div className="relative w-full h-full">
+<<<<<<< HEAD
+=======
+      {/* The video element now fills the container */}
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
       <video
         ref={videoRef}
         autoPlay
@@ -343,11 +425,19 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
         style={{ position: "relative", zIndex: 0 }}
         className="w-full h-full object-cover rounded-lg shadow-2xl"
       />
+<<<<<<< HEAD
+=======
+      {/* Hand overlay canvas */}
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
       <canvas
         ref={canvasHandRef}
         className="absolute top-0 left-0 w-full h-full pointer-events-none"
         style={{ zIndex: 10 }}
       />
+<<<<<<< HEAD
+=======
+      {/* YOLO overlay canvas */}
+>>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
       <canvas
         ref={canvasYoloRef}
         className="absolute top-0 left-0 w-full h-full pointer-events-none"
