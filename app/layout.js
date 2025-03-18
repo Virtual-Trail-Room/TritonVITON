@@ -1,5 +1,4 @@
-// app/layout.js
-import "../src/app/globals.css"
+import "../src/app/globals.css";
 import { Geist, Geist_Mono } from "next/font/google";
 import DarkModeToggle from "../components/DarkModeToggle";
 
@@ -30,4 +29,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-

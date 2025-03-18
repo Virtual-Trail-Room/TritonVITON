@@ -1,0 +1,12 @@
+mediapipe
+opencv-python
+accelerate
+torch
+numpy
+pillow
+transformers
+torchvision
+pycocotools
+fastapi
+uvicorn
+ultralytics
