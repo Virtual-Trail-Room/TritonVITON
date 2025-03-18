@@ -5,6 +5,7 @@ import { useState } from "react";
 import SideMenu from "../components/SideMenu";
 import VideoFeed from "../components/VideoFeed";
 import ClothingList from "../components/ClothingList";
+import AddClothingItem from "../components/AddClothingItem";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("Tops");
@@ -14,33 +15,48 @@ export default function Home() {
     console.log("Category selected:", cat);
   };
 
-  const handleCursorUpdate = (coords) => {
-    console.log("Cursor updated:", coords);
+  const handlePoseUpdate = (keypoints) => {
+    console.log("YOLO Pose keypoints updated:", keypoints);
   };
 
   const handleSimulatedClick = (el) => {
     console.log("Simulated click on:", el);
-    el.click();
+    if (el && typeof el.click === "function") {
+      el.click();
+    } else if (el) {
+      el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    }
   };
 
   return (
     <>
       <Head>
-        <title>Gesture-Based Clothing Selector</title>
-        <meta name="description" content="Gesture-controlled clothing selector using MediaPipe Hands." />
+        <title>Gesture & YOLO Pose Demo</title>
+        <meta name="description" content="Real-time YOLO Pose overlay with webcam feed." />
       </Head>
-      {/* Load CDN scripts for MediaPipe */}
-      <Script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0" strategy="beforeInteractive" />
-      <Script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" strategy="beforeInteractive" />
+      <Script
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0"
+        strategy="beforeInteractive"
+        type="module"
+      />
+      <Script
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        strategy="beforeInteractive"
+        type="module"
+      />
       <div className="flex h-screen">
-        <div className="w-1/5">
+        {/* Left Panel: Side Menu */}
+        <div className="w-1/6 bg-gray-900 text-white p-4">
           <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
         </div>
-        <div className="w-3/5 flex justify-center items-center bg-gray-800">
-          <VideoFeed onCursorUpdate={handleCursorUpdate} onSimulatedClick={handleSimulatedClick} />
+        {/* Middle Panel: Video Feed */}
+        <div className="flex-1 bg-gray-800 relative">
+          <VideoFeed onPoseUpdate={handlePoseUpdate} onSimulatedClick={handleSimulatedClick} />
         </div>
-        <div className="w-1/5">
-          <ClothingList />
+        {/* Right Panel: Clothing List and Add Form */}
+        <div className="w-1/6 bg-gray-900 text-white p-4 overflow-y-auto">
+          <ClothingList selectedCategory={selectedCategory} />
+          <AddClothingItem />
         </div>
       </div>
     </>
