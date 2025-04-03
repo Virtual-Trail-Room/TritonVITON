@@ -97,7 +97,7 @@ export default function AddClothingItem() {
         <input
           type="text"
           name="gender"
-          placeholder="Gender (male, female, nonbinary)"
+          placeholder="Gender (male, female, nonbinary, all gender)"
           value={formData.gender}
           onChange={handleChange}
         />
