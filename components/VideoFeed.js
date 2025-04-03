@@ -12,7 +12,7 @@ const HAND_CONNECTIONS = [
   [0, 17],
 ];
 
-// --- YOLO Pose Skeleton Connections ---
+// --- YOLO Pose Skeleton Connections (unchanged) ---
 const SKELETON_CONNECTIONS = [
   [1, 2], [1, 3], [2, 4], [3, 5],
   [6, 7], [6, 8], [7, 9], [8, 10], [9, 11],
@@ -20,19 +20,24 @@ const SKELETON_CONNECTIONS = [
   [6, 12], [7, 13],
 ];
 
+// Thresholds for gestures
+const CLICK_GESTURE_THRESHOLD = 0.05; // distance threshold for click gesture
+const FIST_GESTURE_THRESHOLD = 0.1;   // average distance threshold for fist (drag) gesture
+
 export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
   const videoRef = useRef(null);
   const canvasHandRef = useRef(null);
   const canvasYoloRef = useRef(null);
   const globalCursorRef = useRef(null);
+  // Store the last detected cursor position
   const lastCursorPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
   const yoloKeypointsRef = useRef(null);
 
   const [handLandmarker, setHandLandmarker] = useState(null);
   const [webcamOn, setWebcamOn] = useState(false);
 
-  const PINCH_DISTANCE_THRESHOLD = 0.05; // normalized units
-  const CLICK_DEBOUNCE = 1000; // ms between simulated clicks
+  // Gesture thresholds for click debounce
+  const CLICK_DEBOUNCE = 1000; // ms
   const lastClickTimeRef = useRef(0);
 
   // --- Initialize HandLandmarker ---
@@ -81,26 +86,27 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
     }
   }, [webcamOn]);
 
-  // --- Initialize Global Cursor Styling ---
+  // --- Initialize Global Cursor with custom PNGs ---
   useEffect(() => {
     if (globalCursorRef.current) {
       Object.assign(globalCursorRef.current.style, {
-        left: `${lastCursorPosRef.current.x}px`,
-        top: `${lastCursorPosRef.current.y}px`,
-        backgroundColor: "red",
-        width: "20px",
-        height: "20px",
+        width: "40px",
+        height: "40px",
+        backgroundImage: "url('/cursor-hover.png')",
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
         position: "fixed",
         zIndex: "30",
-        border: "2px solid yellow",
-        borderRadius: "50%",
+        pointerEvents: "none",
+        left: `${lastCursorPosRef.current.x}px`,
+        top: `${lastCursorPosRef.current.y}px`,
         transform: "translate(-50%, -50%)",
       });
-      console.log("Global cursor initialized at center.");
+      console.log("Global custom cursor initialized.");
     }
   }, []);
 
-  // --- Hand Detection Loop (drawn on canvasHandRef) ---
+  // --- Hand Detection Loop ---
   useEffect(() => {
     async function processHandFrame() {
       const video = videoRef.current;
@@ -125,36 +131,79 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
           const handResults = await handLandmarker.detectForVideo(video, startTimeMs);
           if (handResults.landmarks && handResults.landmarks.length > 0) {
             handResults.landmarks.forEach((landmarks) => {
+              // Draw hand landmarks if drawing utilities are available.
               if (window.drawConnectors && window.drawLandmarks) {
                 window.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 2 });
                 window.drawLandmarks(ctx, landmarks, { color: "#FF0000", lineWidth: 1 });
               } else {
                 console.warn("Drawing utilities not available on window.");
               }
-              const indexTip = landmarks[8];
-              const globalX = indexTip.x * window.innerWidth;
-              const globalY = indexTip.y * window.innerHeight;
+
+              // Calculate palm center using landmarks 0,5,9,13,17.
+              const palmIndices = [0, 5, 9, 13, 17];
+              let sumX = 0, sumY = 0;
+              palmIndices.forEach(i => {
+                sumX += landmarks[i].x;
+                sumY += landmarks[i].y;
+              });
+              const palmCenterX = sumX / palmIndices.length;
+              const palmCenterY = sumY / palmIndices.length;
+              const globalX = palmCenterX * window.innerWidth;
+              const globalY = palmCenterY * window.innerHeight;
               lastCursorPosRef.current = { x: globalX, y: globalY };
+
               if (globalCursorRef.current) {
                 globalCursorRef.current.style.left = `${globalX}px`;
                 globalCursorRef.current.style.top = `${globalY}px`;
               }
-              if (onCursorUpdate) onCursorUpdate({ x: globalX, y: globalY });
+
+              // Compute distances for click gesture: thumb tip (4), index tip (8), middle tip (12).
               const thumbTip = landmarks[4];
-              const dx = thumbTip.x - indexTip.x;
-              const dy = thumbTip.y - indexTip.y;
-              const pinchDistance = Math.sqrt(dx * dx + dy * dy);
-              const now = Date.now();
-              if (pinchDistance < PINCH_DISTANCE_THRESHOLD && now - lastClickTimeRef.current > CLICK_DEBOUNCE) {
-                const el = document.elementFromPoint(globalX, globalY);
-                if (el && onSimulatedClick) onSimulatedClick(el);
-                lastClickTimeRef.current = now;
-                if (globalCursorRef.current) {
-                  globalCursorRef.current.style.backgroundColor = "green";
-                  setTimeout(() => {
-                    if (globalCursorRef.current) globalCursorRef.current.style.backgroundColor = "red";
-                  }, 200);
+              const indexTip = landmarks[8];
+              const middleTip = landmarks[12];
+              const distThumbIndex = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+              const distThumbMiddle = Math.hypot(thumbTip.x - middleTip.x, thumbTip.y - middleTip.y);
+              const distIndexMiddle = Math.hypot(indexTip.x - middleTip.x, indexTip.y - middleTip.y);
+              const clickGesture = (
+                distThumbIndex < CLICK_GESTURE_THRESHOLD &&
+                distThumbMiddle < CLICK_GESTURE_THRESHOLD &&
+                distIndexMiddle < CLICK_GESTURE_THRESHOLD
+              );
+
+              // Compute average distance of all fingertips (4,8,12,16,20) from the palm center.
+              const fingertipIndices = [4, 8, 12, 16, 20];
+              let totalFistDist = 0, count = 0;
+              fingertipIndices.forEach(i => {
+                const kp = landmarks[i];
+                if (kp) {
+                  const dx = kp.x - palmCenterX;
+                  const dy = kp.y - palmCenterY;
+                  totalFistDist += Math.hypot(dx, dy);
+                  count++;
                 }
+              });
+              const avgFistDist = count > 0 ? totalFistDist / count : 1;
+              const dragGesture = avgFistDist < FIST_GESTURE_THRESHOLD;
+
+              // Send updated cursor info upward.
+              if (onCursorUpdate)
+                onCursorUpdate({ x: globalX, y: globalY, click: clickGesture, dragging: dragGesture });
+
+              // If a click gesture is detected and debounce passed, simulate a click.
+              if (clickGesture && Date.now() - lastClickTimeRef.current > CLICK_DEBOUNCE) {
+                if (globalCursorRef.current) {
+                  globalCursorRef.current.style.backgroundImage = "url('/cursor-click.png')";
+                }
+                const el = document.elementFromPoint(globalX, globalY);
+                if (el && onSimulatedClick) {
+                  onSimulatedClick(el);
+                }
+                lastClickTimeRef.current = Date.now();
+                setTimeout(() => {
+                  if (globalCursorRef.current) {
+                    globalCursorRef.current.style.backgroundImage = "url('/cursor-hover.png')";
+                  }
+                }, 200);
               }
             });
           } else {
@@ -171,7 +220,7 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
     }
   }, [handLandmarker, webcamOn, onCursorUpdate, onSimulatedClick]);
 
-  // --- YOLO Backend Polling (update yoloKeypointsRef) ---
+  // --- YOLO Backend Polling & Skeleton Drawing ---
   useEffect(() => {
     if (webcamOn) {
       const intervalId = setInterval(() => {
@@ -204,6 +253,7 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
               yoloKeypointsRef.current = keypoints;
             } else {
               yoloKeypointsRef.current = null;
+              console.log("No YOLO keypoints detected.");
             }
           } catch (error) {
             console.error("Error sending frame to YOLO backend:", error);
@@ -214,7 +264,6 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
     }
   }, [webcamOn]);
 
-  // --- YOLO Skeleton Drawing Loop (drawn on canvasYoloRef) ---
   useEffect(() => {
     function isValidKp(kp) {
       return kp[0] !== 0 || kp[1] !== 0;
@@ -279,7 +328,6 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
 
   return (
     <div className="relative w-full h-full">
-      {/* The video element now fills the container */}
       <video
         ref={videoRef}
         autoPlay
@@ -288,13 +336,11 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
         style={{ position: "relative", zIndex: 0 }}
         className="w-full h-full object-cover rounded-lg shadow-2xl"
       />
-      {/* Hand overlay canvas */}
       <canvas
         ref={canvasHandRef}
         className="absolute top-0 left-0 w-full h-full pointer-events-none"
         style={{ zIndex: 10 }}
       />
-      {/* YOLO overlay canvas */}
       <canvas
         ref={canvasYoloRef}
         className="absolute top-0 left-0 w-full h-full pointer-events-none"
