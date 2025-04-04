@@ -21,7 +21,7 @@ async def test_endpoint():
 
 # Load YOLO Pose Model
 try:
-    model = YOLO("yolo11s-pose.pt")
+    model = YOLO("yolo11n-pose.pt")
     print("YOLO Pose Model loaded successfully.")
 except Exception as e:
     print("Error loading YOLO Pose Model:", e)

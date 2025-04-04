@@ -1,7 +1,7 @@
 "use client";
 import Head from "next/head";
 import Script from "next/script";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SideMenu from "../components/SideMenu";
 import VideoFeed from "../components/VideoFeed";
 import ClothingList from "../components/ClothingList";
@@ -10,13 +10,24 @@ import DarkModeToggle from "../components/DarkModeToggle";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("Blouses");
+  // Initialize with safe default values and update on client mount
   const [cursor, setCursor] = useState({
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
+    x: 0,
+    y: 0,
     click: false,
     dragging: false,
   });
   const [isLeftHanded, setIsLeftHanded] = useState(false);
+
+  useEffect(() => {
+    // Only on the client, update the cursor initial values
+    setCursor({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      click: false,
+      dragging: false,
+    });
+  }, []);
 
   const handleCategorySelect = (cat) => {
     setSelectedCategory(cat);
@@ -52,7 +63,8 @@ export default function Home() {
         strategy="beforeInteractive"
         type="module"
       />
-      {/* Top Controls */}
+
+      {/* Top Right Controls */}
       <div className="absolute top-4 right-4 z-40 flex gap-4">
         <DarkModeToggle />
         <button
@@ -62,24 +74,36 @@ export default function Home() {
           {isLeftHanded ? "Right-Handed Users" : "Left-Handed Users"}
         </button>
       </div>
+
       {/* Main Video Background */}
       <div className="relative h-screen w-screen overflow-hidden">
-        <VideoFeed
-          onCursorUpdate={handleCursorUpdate}
-          onSimulatedClick={handleSimulatedClick}
-        />
-        {/* Scrollable container for ClothingList */}
-        <div className="absolute top-0 right-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
-          <ClothingList selectedCategory={selectedCategory} cursor={cursor} />
-        </div>
-        {/* Optional SideMenu on the left */}
-        <div className="absolute top-0 left-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
-          <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
-        </div>
-        {/* Floating AddClothingItem button */}
-        <div className="absolute bottom-4 right-4 z-50">
-          <AddClothingItem />
-        </div>
+        <VideoFeed onCursorUpdate={handleCursorUpdate} onSimulatedClick={handleSimulatedClick} />
+
+        {/* Layout for Right-Handed Mode */}
+        {!isLeftHanded && (
+          <>
+            <div className="absolute top-0 left-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
+              <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
+            </div>
+            <div className="absolute top-0 right-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
+              <ClothingList selectedCategory={selectedCategory} cursor={cursor} />
+              <AddClothingItem />
+            </div>
+          </>
+        )}
+
+        {/* Layout for Left-Handed Mode */}
+        {isLeftHanded && (
+          <>
+            <div className="absolute top-0 left-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
+              <ClothingList selectedCategory={selectedCategory} cursor={cursor} />
+              <AddClothingItem />
+            </div>
+            <div className="absolute top-0 right-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
+              <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
+            </div>
+          </>
+        )}
       </div>
     </>
   );
