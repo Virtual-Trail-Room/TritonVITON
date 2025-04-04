@@ -30,7 +30,14 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick }) {
   const canvasYoloRef = useRef(null);
   const globalCursorRef = useRef(null);
   // Store the last detected cursor position
-  const lastCursorPosRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  // Initialize with safe defaults
+  const lastCursorPosRef = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    // Now that we are on the client, update with window dimensions.
+    lastCursorPosRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  }, []);
+
   const yoloKeypointsRef = useRef(null);
 
   const [handLandmarker, setHandLandmarker] = useState(null);
