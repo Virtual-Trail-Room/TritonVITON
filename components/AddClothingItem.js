@@ -25,7 +25,6 @@ export default function AddClothingItem() {
     e.preventDefault();
     setMessage("");
 
-    // Ensure a file is selected and all fields are filled
     if (!file) {
       setMessage("Please select an image file.");
       return;
@@ -36,7 +35,7 @@ export default function AddClothingItem() {
     }
 
     try {
-      // 1. Upload the image file to Cloudinary via our API route.
+      // 1. Upload file to Cloudinary
       const uploadData = new FormData();
       uploadData.append("file", file);
       const uploadRes = await fetch("/api/upload", {
@@ -53,14 +52,14 @@ export default function AddClothingItem() {
         throw new Error("No URL returned from file upload");
       }
 
-      // 2. Combine the image URL with the rest of the form data
+      // 2. Combine Cloudinary URL with form data
       const clothingPayload = {
         ...formData,
-        image2D: imageURL,
+        imageURL, // Using the returned Cloudinary URL
       };
       console.log("Clothing payload:", clothingPayload);
 
-      // 3. Send the final POST request to add the clothing item
+      // 3. Send final POST request to add the clothing item
       const clothingRes = await fetch("/api/clothing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -74,8 +73,13 @@ export default function AddClothingItem() {
       console.log("Clothing item added:", clothingData);
       setMessage("Clothing item added successfully!");
 
-      // Clear the form (optional)
-      setFormData({ clothingID: "", gender: "", category: "", asset3D: "" });
+      // Optionally, clear the form:
+      setFormData({
+        clothingID: "",
+        gender: "",
+        category: "",
+        asset3D: ""
+      });
       setFile(null);
     } catch (error) {
       console.error("Error:", error);
@@ -115,7 +119,7 @@ export default function AddClothingItem() {
         <input
           type="text"
           name="asset3D"
-          placeholder="3D Asset URL"
+          placeholder="3D Asset URL (if available)"
           value={formData.asset3D}
           onChange={handleChange}
         />

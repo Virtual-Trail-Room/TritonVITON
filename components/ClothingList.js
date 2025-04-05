@@ -15,8 +15,7 @@ export default function ClothingList({ selectedCategory }) {
       try {
         const res = await fetch("/api/clothing");
         const data = await res.json();
-        //console.log("Fetched data:", data);
-        // console.log("Type:", typeof data, "Is Array?", Array.isArray(data));
+        console.log("Fetched data:", data); // Check here!
         setClothingItems(data);
       } catch (error) {
         console.error("Error fetching clothing items:", error);
@@ -24,6 +23,7 @@ export default function ClothingList({ selectedCategory }) {
     }
     fetchClothing();
   }, []);
+  
 
 <<<<<<< HEAD
 =======

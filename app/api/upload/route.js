@@ -1,39 +1,48 @@
 // app/api/upload/route.js
+import { v2 as cloudinary } from 'cloudinary';
 import { NextResponse } from 'next/server';
-import cloudinary from 'cloudinary';
 
-cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
-  api_key: process.env.CLOUDINARY_API_KEY,       
-  api_secret: process.env.CLOUDINARY_API_SECRET,  
+// Make sure your Cloudinary configuration is set in environment variables.
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 export async function POST(request) {
-  // Parse the form data from the request
-  const formData = await request.formData();
-  const file = formData.get('file');
-  
-  if (!file) {
-    return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
-  }
-
-  // Convert the Blob to a Buffer
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  // Upload the file to Cloudinary using upload_stream
-  return new Promise((resolve) => {
-    const stream = cloudinary.v2.uploader.upload_stream(
-      { folder: 'clothing' },
-      (error, result) => {
-        if (error) {
-          console.error("Cloudinary upload error:", error);
-          resolve(NextResponse.json({ error: "Upload failed" }, { status: 500 }));
-        } else {
-          resolve(NextResponse.json({ url: result.secure_url }));
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file'); // the uploaded file
+    if (!file) {
+      return NextResponse.json({ message: 'No file provided' }, { status: 400 });
+    }
+    // Convert the file to a buffer (if needed)
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Upload to Cloudinary
+    const uploadResponse = await cloudinary.uploader.upload_stream({
+      folder: 'clothing',
+    }, (error, result) => {
+      if (error) throw error;
+      return result;
+    });
+    
+    // Alternatively, use a promise-based method:
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'clothing' },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
         }
-      }
-    );
-    stream.end(buffer);
-  });
+      );
+      stream.end(buffer);
+    });
+    
+    return NextResponse.json({ url: result.secure_url }, { status: 200 });
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    return NextResponse.json({ message: "Upload failed", error: error.message }, { status: 500 });
+  }
 }
