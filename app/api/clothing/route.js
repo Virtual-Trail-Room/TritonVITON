@@ -3,30 +3,11 @@ import connectToDatabase from '../../../lib/mongoose';
 import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 
-// GET handler: Fetch all clothing items from the database.
-export async function GET(request) {
-  try {
-    const mongooseConnection = await connectToDatabase();
-    // Explicitly select the database using the provided environment variable or a default name.
-    const db = mongooseConnection.connection.useDb(process.env.MONGODB_DB || 'clothing');
-    // Fetch all clothing items from the "clothings" collection as an array.
-    const clothingItems = await db.collection('clothings').find({}).toArray();
-    console.log("Fetched clothing items from Mongo:", clothingItems);
-    return new NextResponse(JSON.stringify(clothingItems), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    console.error("Failed to fetch clothing items:", error);
-    return new NextResponse(JSON.stringify({ message: "Error fetching items" }), { status: 500 });
-  }
-}
-
-// POST handler: Create a new clothing item and run InstantMesh to generate a 3D model.
 export async function POST(request) {
   try {
-    // Parse incoming JSON (adjust if you're using FormData)
+    // Parse incoming JSON
     const body = await request.json();
     // Expecting body fields: clothingID, gender, category, imageURL
     const mongooseConnection = await connectToDatabase();
@@ -37,18 +18,19 @@ export async function POST(request) {
       clothingID: body.clothingID,
       gender: body.gender,
       category: body.category,
-      image2D: body.imageURL,
-      asset3D: '', // placeholder for 3D asset
+      image2D: body.imageURL,  // This should already be the Cloudinary URL
+      asset3D: '',             // placeholder for the 3D model URL
     };
     const result = await db.collection('clothings').insertOne(newItem);
     const itemId = result.insertedId;
 
     // Set up file paths.
+    // For example, we assume the image file is already local or downloaded.
     const tempImagePath = path.join('/tmp', `${body.clothingID}.png`);
     const instantMeshScript = path.join(process.cwd(), 'instantmesh', 'run_instantmesh.py');
-    const outputMeshPath = path.join('/tmp', `${body.clothingID}.obj`);
+    const tempOutputMeshPath = path.join('/tmp', `${body.clothingID}.obj`);
 
-    // Use the absolute path to your virtual environment's Python executable and set up environment variables.
+    // Spawn the Python process (using your virtual environment's Python)
     const pythonExecutable = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
     console.log("Using Python executable:", pythonExecutable);
 
@@ -63,7 +45,7 @@ export async function POST(request) {
       '--input', tempImagePath,
       '--config', path.join(process.cwd(), 'configs', 'instant-mesh-large.yaml'),
       '--ckpt', path.join(process.cwd(), 'ckpts', 'instant_mesh_large.ckpt'),
-      '--output', outputMeshPath,
+      '--output', tempOutputMeshPath,
     ], { env });
 
     pythonProcess.stdout.on('data', (data) => {
@@ -84,13 +66,25 @@ export async function POST(request) {
       });
     });
 
-    // Update the MongoDB document with the generated mesh path.
+    // Move the generated mesh file from the temporary folder to a permanent location.
+    // We'll store it in the "public/models" directory.
+    const modelsDir = path.join(process.cwd(), 'public', 'models');
+    if (!fs.existsSync(modelsDir)) {
+      fs.mkdirSync(modelsDir, { recursive: true });
+    }
+    const finalMeshPath = path.join(modelsDir, `${body.clothingID}.obj`);
+    fs.renameSync(tempOutputMeshPath, finalMeshPath);
+
+    // Construct a URL that points to the newly saved model.
+    const modelUrl = `/models/${body.clothingID}.obj`;
+
+    // Update the MongoDB document with the generated mesh URL.
     await db.collection('clothings').updateOne(
       { _id: itemId },
-      { $set: { asset3D: outputMeshPath } }
+      { $set: { asset3D: modelUrl } }
     );
 
-    return new NextResponse(JSON.stringify({ message: 'Clothing item processed', id: itemId, mesh: outputMeshPath }), {
+    return new NextResponse(JSON.stringify({ message: 'Clothing item processed', id: itemId, mesh: modelUrl }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -99,4 +93,3 @@ export async function POST(request) {
     return new NextResponse(JSON.stringify({ message: 'Error processing clothing item', error: error.message }), { status: 500 });
   }
 }
-
