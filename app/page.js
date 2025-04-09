@@ -17,9 +17,10 @@ export default function Home() {
     dragging: false,
   });
 
-  // Use context for handedness
+  // Get handedness value from context.
   const { isLeftHanded } = useHandedness();
 
+  // Update initial cursor position on client.
   useEffect(() => {
     setCursor({
       x: window.innerWidth / 2,
@@ -34,13 +35,8 @@ export default function Home() {
     console.log("Category selected:", cat);
   };
 
-<<<<<<< HEAD
   const handleCursorUpdate = (pos) => {
     setCursor(pos);
-=======
-  const handlePoseUpdate = (keypoints) => {
-    console.log("YOLO Pose keypoints updated:", keypoints);
->>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
   };
 
   const handleSimulatedClick = (el) => {
@@ -56,7 +52,10 @@ export default function Home() {
     <>
       <Head>
         <title>Modern Gesture-Controlled Clothing Selector</title>
-        <meta name="description" content="Modern UI with gesture control and YOLO pose detection." />
+        <meta
+          name="description"
+          content="Modern UI with gesture control and YOLO pose detection."
+        />
       </Head>
       <Script
         src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0"
@@ -72,9 +71,10 @@ export default function Home() {
       <div className="relative h-screen w-screen overflow-hidden">
         <VideoFeed onCursorUpdate={handleCursorUpdate} onSimulatedClick={handleSimulatedClick} />
 
+        {/* Layout for Left-Handed vs. Right-Handed */}
         {isLeftHanded ? (
           <>
-            {/* Left-Handed Layout: Clothing list and AddClothingItem on left, SideMenu on right */}
+            {/* Left-Handed Layout: Clothing list and AddClothingItem on left; SideMenu on right */}
             <div className="absolute top-0 left-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
               <ClothingList selectedCategory={selectedCategory} cursor={cursor} />
               <AddClothingItem />
@@ -85,7 +85,7 @@ export default function Home() {
           </>
         ) : (
           <>
-            {/* Right-Handed Layout: SideMenu on left, Clothing list and AddClothingItem on right */}
+            {/* Right-Handed Layout: SideMenu on left; ClothingList and AddClothingItem on right */}
             <div className="absolute top-0 left-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
               <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
             </div>
