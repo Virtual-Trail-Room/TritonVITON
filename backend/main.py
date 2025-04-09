@@ -19,13 +19,9 @@ app.add_middleware(
 async def test_endpoint():
     return {"message": "Server is running."}
 
-# Load YOLO Pose Model
+# Load YOLO Pose Model. Here, we're using "yolo11s-pose.pt"; change if desired.
 try:
-<<<<<<< HEAD
-    model = YOLO("yolo11n-pose.pt")
-=======
     model = YOLO("yolo11s-pose.pt")
->>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
     print("YOLO Pose Model loaded successfully.")
 except Exception as e:
     print("Error loading YOLO Pose Model:", e)
