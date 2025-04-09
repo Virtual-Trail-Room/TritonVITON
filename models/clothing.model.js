@@ -15,13 +15,8 @@ const clothingSchema = new Schema({
     enum: ['Blouses', 'Cardigans', 'Jackets', 'Sweaters', 'Tanks', 'Tees', 'Tops', 'Jeans', 'Shorts', 'Skirts', 'Dress']
   },
   image2D: { type: String, required: true },
-  asset3D: { type: String, required: true }
-=======
-  gender: { type: String, required: true, enum: ['male', 'female', 'nonbinary'] },
-  category: { type: String, required: true },
-  image2D: { type: String, required: true },  // URL or file path
-  asset3D: { type: String, required: false }     // URL or file path
->>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
+  //asset3D: { type: String, required: true }
+  // mask: {type: "", required true }
 }, {
   timestamps: true,
 });

@@ -6,34 +6,21 @@ import SideMenu from "../components/SideMenu";
 import VideoFeed from "../components/VideoFeed";
 import ClothingList from "../components/ClothingList";
 import AddClothingItem from "../components/AddClothingItem";
-<<<<<<< HEAD
-import DarkModeToggle from "../components/DarkModeToggle";
-=======
->>>>>>> b8a709c (Addition of YOLO, improved front-end, working mongo backend, cloudinary implementation, early rough implementation of adding new images, working clicking (part 1))
+import { useHandedness } from "../contexts/HandednessContext";
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("Blouses");
-  // Initialize with safe default values and update on client mount
   const [cursor, setCursor] = useState({
     x: 0,
     y: 0,
     click: false,
     dragging: false,
   });
-  const [isLeftHanded, setIsLeftHanded] = useState(false);
+
+  // Use context for handedness
+  const { isLeftHanded } = useHandedness();
 
   useEffect(() => {
-    // Only on the client, update the cursor initial values
-    setCursor({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-      click: false,
-      dragging: false,
-    });
-  }, []);
-
-  useEffect(() => {
-    // Only on the client, update the cursor initial values
     setCursor({
       x: window.innerWidth / 2,
       y: window.innerHeight / 2,
@@ -82,43 +69,29 @@ export default function Home() {
         type="module"
       />
 
-      {/* Top Right Controls */}
-      <div className="absolute top-4 right-4 z-40 flex gap-4">
-        <DarkModeToggle />
-        <button
-          onClick={() => setIsLeftHanded((prev) => !prev)}
-          className="bg-gray-700 text-white px-4 py-2 rounded shadow"
-        >
-          {isLeftHanded ? "Right-Handed Users" : "Left-Handed Users"}
-        </button>
-      </div>
-
-      {/* Main Video Background */}
       <div className="relative h-screen w-screen overflow-hidden">
         <VideoFeed onCursorUpdate={handleCursorUpdate} onSimulatedClick={handleSimulatedClick} />
 
-        {/* Layout for Right-Handed Mode */}
-        {!isLeftHanded && (
+        {isLeftHanded ? (
           <>
+            {/* Left-Handed Layout: Clothing list and AddClothingItem on left, SideMenu on right */}
             <div className="absolute top-0 left-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
-              <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
-            </div>
-            <div className="absolute top-0 right-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
               <ClothingList selectedCategory={selectedCategory} cursor={cursor} />
               <AddClothingItem />
+            </div>
+            <div className="absolute top-0 right-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
+              <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
             </div>
           </>
-        )}
-
-        {/* Layout for Left-Handed Mode */}
-        {isLeftHanded && (
+        ) : (
           <>
+            {/* Right-Handed Layout: SideMenu on left, Clothing list and AddClothingItem on right */}
             <div className="absolute top-0 left-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
-              <ClothingList selectedCategory={selectedCategory} cursor={cursor} />
-              <AddClothingItem />
+              <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
             </div>
             <div className="absolute top-0 right-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
-              <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
+              <ClothingList selectedCategory={selectedCategory} cursor={cursor} />
+              <AddClothingItem />
             </div>
           </>
         )}

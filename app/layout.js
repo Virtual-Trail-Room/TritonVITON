@@ -1,6 +1,8 @@
+// app/layout.js
 import "../src/app/globals.css";
 import { Geist, Geist_Mono } from "next/font/google";
-import DarkModeToggle from "../components/DarkModeToggle";
+import HeaderBar from "../components/HeaderBar";
+import { HandednessProvider } from "../contexts/HandednessContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,18 +15,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Gesture-Based Clothing Selector",
-  description: "A gesture-controlled clothing selector using MediaPipe Hands",
+  title: "TritonVITON",
+  description: "A gesture-controlled clothing selector & 3D model viewer",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div className="p-4 flex justify-end">
-          <DarkModeToggle />
-        </div>
-        {children}
+        <HandednessProvider>
+          <HeaderBar />
+          <main role="main">{children}</main>
+        </HandednessProvider>
       </body>
     </html>
   );

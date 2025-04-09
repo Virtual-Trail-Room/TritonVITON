@@ -6,7 +6,7 @@ export default function AddClothingItem() {
     clothingID: "",
     gender: "",
     category: "",
-    asset3D: ""
+    // asset3D: ""
   });
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
@@ -29,7 +29,7 @@ export default function AddClothingItem() {
       setMessage("Please select an image file.");
       return;
     }
-    if (!formData.clothingID || !formData.gender || !formData.category || !formData.asset3D) {
+    if (!formData.clothingID || !formData.gender || !formData.category) {
       setMessage("Please fill in all required fields.");
       return;
     }
@@ -78,7 +78,7 @@ export default function AddClothingItem() {
         clothingID: "",
         gender: "",
         category: "",
-        asset3D: ""
+        // asset3D: ""
       });
       setFile(null);
     } catch (error) {
@@ -114,13 +114,6 @@ export default function AddClothingItem() {
           name="category"
           placeholder="Category"
           value={formData.category}
-          onChange={handleChange}
-        />
-        <input
-          type="text"
-          name="asset3D"
-          placeholder="3D Asset URL (if available)"
-          value={formData.asset3D}
           onChange={handleChange}
         />
         <input

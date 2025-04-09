@@ -1,40 +1,44 @@
+// components/SideMenu.js
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import CustomDropdown from "./CustomDropdown";
+
+// Define your category groups.
+const CATEGORY_GROUPS = {
+  Top: ["Blouses", "Cardigans", "Jackets", "Sweaters", "Tanks", "Tees", "Tops"],
+  Bottom: ["Jeans", "Shorts", "Skirts"],
+  "Full-body": ["Dress"],
+};
 
 export default function SideMenu({ selectedCategory, onCategorySelect }) {
-  const [categories, setCategories] = useState([]);
+  // We'll list all group options
+  const groupOptions = Object.keys(CATEGORY_GROUPS);
+  // Use one of the groups as the default or based on your app logic.
+  const [selectedGroup, setSelectedGroup] = useState("Top");
 
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const res = await fetch("/api/categories");
-        const data = await res.json();
-        // Map to an array of names; if empty, fallback to default categories
-        setCategories(
-          data.length > 0
-            ? data.map((cat) => cat.name)
-            : ["Blouses", "Cardigans", "Jackets", "Sweaters", "Tanks", "Tees", "Tops", "Jeans", "Shorts", "Skirts", "Dress"]
-        );
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        setCategories(["Blouses", "Cardigans", "Jackets", "Sweaters", "Tanks", "Tees", "Tops", "Jeans", "Shorts", "Skirts", "Dress"]);
-      }
-    }
-    fetchCategories();
-  }, []);
+  const displayedCategories = CATEGORY_GROUPS[selectedGroup];
 
   return (
-    <div className="p-4 bg-black bg-opacity-60 rounded-lg shadow-lg">
+    <div className="p-6 bg-black bg-opacity-60 rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-white">Categories</h2>
+
+      {/* Use our custom dropdown for group selection */}
+      <div className="mb-6">
+        <CustomDropdown
+          options={groupOptions}
+          selected={selectedGroup}
+          onChange={(group) => setSelectedGroup(group)}
+        />
+      </div>
+
+      {/* List of categories from the selected group */}
       <ul className="space-y-4">
-        {categories.map((cat) => (
+        {displayedCategories.map((cat) => (
           <li
             key={cat}
             onClick={() => onCategorySelect(cat)}
-            className={`cursor-pointer p-4 rounded transition-colors ${
-              selectedCategory === cat
-                ? "bg-blue-500 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-blue-400 hover:text-white"
+            className={`cursor-pointer p-4 rounded transition-colors text-white text-xl ${
+              selectedCategory === cat ? "bg-blue-500" : "bg-gray-800 hover:bg-blue-400"
             }`}
           >
             {cat}
