@@ -5,6 +5,7 @@ out/
 
 # Virtual environment folders for Python
 .venv/
+**/.venv/
 env/
 venv/
 
