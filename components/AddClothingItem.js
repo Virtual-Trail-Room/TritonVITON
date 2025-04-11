@@ -5,8 +5,6 @@ export default function AddClothingItem() {
   const [formData, setFormData] = useState({
     clothingID: "",
     // Use a dropdown for gender with a default value.
-    gender: "male",
-    // Use a dropdown for category with a default empty selection.
     category: "",
     // We'll ignore imageURL here because it comes from Cloudinary later.
     imageURL: "",
@@ -32,7 +30,7 @@ export default function AddClothingItem() {
       setMessage("Please select an image file.");
       return;
     }
-    if (!formData.clothingID || !formData.gender || !formData.category) {
+    if (!formData.clothingID || !formData.category) {
       setMessage("Please fill in all required fields.");
       return;
     }
@@ -79,7 +77,6 @@ export default function AddClothingItem() {
       // Optionally, clear the form:
       setFormData({
         clothingID: "",
-        gender: "male",
         category: "",
         imageURL: "",
       });
@@ -102,17 +99,6 @@ export default function AddClothingItem() {
           onChange={handleChange}
           className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
         />
-        <select
-          name="gender"
-          value={formData.gender}
-          onChange={handleChange}
-          className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-        >
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-          <option value="nonbinary">Nonbinary</option>
-          <option value="all gender">All Gender</option>
-        </select>
         <select
           name="category"
           value={formData.category}

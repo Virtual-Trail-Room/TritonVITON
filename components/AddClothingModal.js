@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 // Fixed arrays for gender and category options.
-const genderOptions = ["male", "female", "nonbinary", "all gender"];
 const defaultCategoryOptions = [
   "Blouses",
   "Cardigans",
@@ -21,7 +20,6 @@ const defaultCategoryOptions = [
 export default function AddClothingModal({ onClose }) {
   const [formData, setFormData] = useState({
     clothingID: "",
-    gender: genderOptions[0],
     category: defaultCategoryOptions[0]
   });
   const [file, setFile] = useState(null);
@@ -46,7 +44,7 @@ export default function AddClothingModal({ onClose }) {
       setMessage("Please select an image file.");
       return;
     }
-    if (!formData.clothingID || !formData.gender || !formData.category) {
+    if (!formData.clothingID || !formData.category) {
       setMessage("Please fill in all required fields.");
       return;
     }
@@ -93,7 +91,6 @@ export default function AddClothingModal({ onClose }) {
       // Optionally, clear form fields.
       setFormData({
         clothingID: "",
-        gender: genderOptions[0],
         category: defaultCategoryOptions[0],
       });
       setFile(null);
@@ -130,25 +127,6 @@ export default function AddClothingModal({ onClose }) {
             className="w-full p-3 rounded border border-gray-700 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             aria-label="Clothing ID"
           />
-          <div>
-            <label htmlFor="gender" className="block text-lg text-white mb-1">
-              Gender
-            </label>
-            <select
-              id="gender"
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              className="w-full p-3 rounded border border-gray-700 bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-              aria-label="Select Gender"
-            >
-              {genderOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </div>
           <div>
             <label htmlFor="category" className="block text-lg text-white mb-1">
               Category
