@@ -1,4 +1,3 @@
-// components/ClothingList.js
 "use client";
 import { useState, useEffect, useRef } from "react";
 
@@ -37,7 +36,7 @@ export default function ClothingList({ selectedCategory, cursor }) {
   useEffect(() => {
     if (containerRef.current && cursor && cursor.dragging) {
       const rect = containerRef.current.getBoundingClientRect();
-      // Only update the scroll when the cursor is within the container.
+      // Update scrolling only when the cursor is within the container.
       if (
         cursor.x >= rect.left &&
         cursor.x <= rect.right &&
@@ -46,13 +45,12 @@ export default function ClothingList({ selectedCategory, cursor }) {
       ) {
         if (prevY.current !== null) {
           const dy = cursor.y - prevY.current;
-          // Invert the movement if needed (adjust "-dy" as necessary for your gesture)
+          // Invert the movement if needed.
           containerRef.current.scrollTop += -dy;
         }
       }
       prevY.current = cursor.y;
     } else {
-      // Reset previous Y when dragging stops.
       prevY.current = null;
     }
   }, [cursor]);
@@ -72,12 +70,10 @@ export default function ClothingList({ selectedCategory, cursor }) {
               className="w-full p-3 bg-gray-800 rounded hover:bg-gray-700 transition-colors text-white"
             >
               <div className="flex flex-col items-center">
-                <h3 className="w-full text-center">{item.clothingID}</h3>
-                {/* If the gender field is no longer used you can remove this */}
-                {item.gender && <p className="w-full text-center">{item.gender}</p>}
+                {/* Only display the clothing image */}
                 <img
                   src={item.image2D}
-                  alt={item.clothingID}
+                  alt="Clothing Item"
                   className="w-full h-auto rounded"
                 />
               </div>

@@ -1,0 +1,31 @@
+antlr4-python3-runtime 
+filelock            
+fsspec               
+Jinja2             
+MarkupSafe         
+mpmath             
+networkx         
+numpy              
+nvdiffrast          
+omegaconf           
+opencv-python          
+pillow              
+pip                  
+PyYAML               
+setuptools        
+sympy                
+torch                 
+torchvision            
+trimesh               
+typing_extensions      
+uuid                   
+xatlas 
+# import argparse
+# import io
+# import zipfile
+# import torch
+# import torch.nn as nn
+# import torchvision.models as models
+# from torchvision import transforms
+# from PIL import Image
+# import os

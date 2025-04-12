@@ -1,50 +1,62 @@
+# classifier/predict.py
+#!/usr/bin/env python3
+import argparse
+import sys
+import os
 import torch
-import torch.nn as nn
-import torchvision.models as models
+from torchvision import transforms
+from PIL import Image
+from classifier.classifier import ClothingClassifier  # Ensure __init__.py exists in the classifier folder
 
-class ClothingClassifier(nn.Module):
-    def __init__(self, num_classes, model_type='resnet', num_frozen_resnet_layers=5):
-        super(ClothingClassifier, self).__init__()
-        self.model_type = model_type
+def main():
+    parser = argparse.ArgumentParser(
+        description="Predict clothing category using the ClothingClassifier."
+    )
+    parser.add_argument("image_path", type=str, help="Path to the input image file.")
+    args = parser.parse_args()
 
-        resnet = models.resnet50(pretrained=True)
-        self.resnet_backbone = nn.Sequential(*list(resnet.children())[:-1])
-        self.fc = nn.Linear(resnet.fc.in_features, 1024)
-        self.classifier = nn.Sequential(
-            nn.Linear(1024, 512),
-            nn.BatchNorm1d(512),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(256, 128),
-            nn.BatchNorm1d(128),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(128, num_classes)
-        )
-        for param in list(self.resnet_backbone.parameters())[:-num_frozen_resnet_layers]:
-            param.requires_grad = False
+    selected_labels = [
+        "Blouse", "Cardigan", "Jacket", "Sweater", "Tank",
+        "Tee", "Top", "Jeans", "Shorts", "Skirts", "Dress"
+    ]
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    NUM_CLASSES = 11
+    FROZEN_LAYERS = 60
+    model = ClothingClassifier(num_classes=NUM_CLASSES, num_frozen_resnet_layers=FROZEN_LAYERS, model_type='resnet').to(device)
 
+    # Set the model_path using an absolute path so we know where it’s looking:
+    model_path = "clothing_classifier2-0-1.pth"
+    abs_model_path = os.path.abspath(model_path)
+    print("Loading model weights from:", abs_model_path)  # Debug print
 
-    def forward(self, x):
-        x = self.resnet_backbone(x)
-        x = x.view(x.size(0), -1)
-        x = self.fc(x)
-        x = self.classifier(x)
-        return x
+    try:
+        state_dict = torch.load(abs_model_path, map_location=device)
+        model.load_state_dict(state_dict)
+    except Exception as e:
+        print(f"Error loading model weights: {e}", file=sys.stderr)
+        sys.exit(1)
 
-    def predict(self, image, transform, device='cpu'):
-        selected_labels = ["Blouse", "Cardigan", "Jacket", "Sweater", "Tank", "Tee", "Top", 
-                            "Jeans", "Shorts", "Skirts", "Dress"]
-        label_mapping = {new: name for new, name in enumerate(selected_labels)}
+    model.eval()
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
+    ])
 
-        self.eval()
-        image_transformed = transform(image).unsqueeze(0).to(device)
-        with torch.no_grad():
-            preds = self(image_transformed)
-            predicted = torch.argmax(preds, dim=1).item()
-        garment_class = "A" if predicted < 7 else ("B" if predicted < 10 else "C")
-        return label_mapping[predicted], garment_class
+    try:
+        image = Image.open(args.image_path).convert("RGB")
+    except Exception as e:
+        print(f"Error opening image: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        predicted_label, garment_class = model.predict(image, transform, device)
+    except Exception as e:
+        print(f"Error during prediction: {e}", file=sys.stderr)
+        sys.exit(1)
+    print(f"Predicted label: {predicted_label}")
+    print(f"Garment class: {garment_class}")
+
+if __name__ == "__main__":
+    main()

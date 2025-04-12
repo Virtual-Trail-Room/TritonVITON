@@ -105,9 +105,9 @@ export default function Home() {
         {/* “Add Clothing” Button positioned on top of the video */}
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="absolute bottom-8 right-8 px-6 py-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition"
+          className="absolute bottom-8 right-8 px-6 py-3 bg-green-500 text-white rounded-full shadow-lg hover:bg-blue-700 transition"
         >
-          Add Clothing
+          Add Item
         </button>
       </div>
 
