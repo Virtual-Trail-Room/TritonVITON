@@ -1,3 +1,4 @@
+// components/ClothingList.js
 "use client";
 import { useState, useEffect, useRef } from "react";
 
@@ -6,12 +7,20 @@ export default function ClothingList({ selectedCategory, cursor }) {
   const containerRef = useRef(null);
   const prevY = useRef(null);
 
+  // Fetch clothing items from the API on component mount.
   useEffect(() => {
     async function fetchClothing() {
       try {
         const res = await fetch("/api/clothing");
         const data = await res.json();
-        setClothingItems(data);
+        console.log("Fetched data:", data);
+        // Ensure that the API returned an array.
+        if (!Array.isArray(data)) {
+          console.error("Fetched data is not an array:", data);
+          setClothingItems([]);
+        } else {
+          setClothingItems(data);
+        }
       } catch (error) {
         console.error("Error fetching clothing items:", error);
       }
@@ -19,16 +28,16 @@ export default function ClothingList({ selectedCategory, cursor }) {
     fetchClothing();
   }, []);
 
-  // Filter items by selected category.
+  // Filter the clothing items by the selected category.
   const filteredItems = clothingItems.filter(
     (item) => item.category === selectedCategory
   );
 
-  // If a cursor prop is provided with dragging info, enable scrolling
+  // If a 'cursor' with dragging properties is passed, update scrolling.
   useEffect(() => {
-    if (cursor && containerRef.current && cursor.dragging) {
+    if (containerRef.current && cursor && cursor.dragging) {
       const rect = containerRef.current.getBoundingClientRect();
-      // Only scroll if the cursor is over the container.
+      // Only update the scroll when the cursor is within the container.
       if (
         cursor.x >= rect.left &&
         cursor.x <= rect.right &&
@@ -37,13 +46,13 @@ export default function ClothingList({ selectedCategory, cursor }) {
       ) {
         if (prevY.current !== null) {
           const dy = cursor.y - prevY.current;
-          // Invert dy if necessary
+          // Invert the movement if needed (adjust "-dy" as necessary for your gesture)
           containerRef.current.scrollTop += -dy;
         }
       }
       prevY.current = cursor.y;
     } else {
-      // Reset previous Y when not dragging.
+      // Reset previous Y when dragging stops.
       prevY.current = null;
     }
   }, [cursor]);
@@ -60,11 +69,12 @@ export default function ClothingList({ selectedCategory, cursor }) {
           {filteredItems.map((item) => (
             <li
               key={item._id}
-              className="p-3 bg-gray-800 rounded hover:bg-gray-700 transition-colors text-white"
+              className="w-full p-3 bg-gray-800 rounded hover:bg-gray-700 transition-colors text-white"
             >
               <div className="flex flex-col items-center">
                 <h3 className="w-full text-center">{item.clothingID}</h3>
-                <p className="w-full text-center">{item.gender}</p>
+                {/* If the gender field is no longer used you can remove this */}
+                {item.gender && <p className="w-full text-center">{item.gender}</p>}
                 <img
                   src={item.image2D}
                   alt={item.clothingID}

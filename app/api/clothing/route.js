@@ -3,108 +3,130 @@ import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
+import { v4 as uuidv4 } from 'uuid'; // make sure to install uuid with: npm install uuid
 
-// GET handler: Fetch all clothing items from the database.
-export async function GET(request) {
-  try {
-    const mongooseConnection = await connectToDatabase();
-    // Use the default database from the connection URI or process.env.MONGODB_DB if provided.
-    const db = mongooseConnection.connection.db;
-    // Fetch all items from the "clothings" collection.
-    const clothingItems = await db.collection('clothings').find({}).toArray();
-    return new NextResponse(JSON.stringify(clothingItems), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    console.error("Failed to fetch clothing items:", error);
-    return new NextResponse(JSON.stringify({ message: "Error fetching items" }), { status: 500 });
-  }
+// Helper function to download an image from a URL to a local destination.
+async function downloadImage(url, destPath) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to download image: ${res.statusText}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  fs.writeFileSync(destPath, buffer);
 }
 
-// POST handler: Create a new clothing item and run InstantMesh to generate a 3D model.
 export async function POST(request) {
   try {
-    // Parse incoming JSON
+    // Parse incoming JSON; expect fields: clothingID, imageURL.
     const body = await request.json();
-    // Expecting body fields: clothingID, category, imageURL
+
+    // If clothingID is missing, generate one.
+    if (!body.clothingID) {
+      body.clothingID = uuidv4();
+      console.log("No clothingID provided, generated:", body.clothingID);
+    }
+    if (!body.imageURL) {
+      throw new Error("Missing imageURL in request body");
+    }
+
+    // Connect to the database.
     const mongooseConnection = await connectToDatabase();
-    const db = mongooseConnection.connection.db;
-    
-    // Insert a new clothing document with a placeholder for asset3D.
+    let db;
+    // Adjust this part based on your connection type.
+    if (mongooseConnection.connection && mongooseConnection.connection.db) {
+      db = mongooseConnection.connection.db;
+    } else if (typeof mongooseConnection.db === 'function') {
+      db = mongooseConnection.db(process.env.MONGODB_DB || 'clothings');
+    } else {
+      throw new Error("Invalid database connection object.");
+    }
+
+    // Insert a new clothing document.
     const newItem = {
       clothingID: body.clothingID,
-      category: body.category,
-      image2D: body.imageURL,  // This should be a Cloudinary URL or similar
-      asset3D: '',             // Placeholder for the 3D model URL
+      // The category will be set after classification.
+      category: "",
+      image2D: body.imageURL,  // Cloudinary URL.
+      asset3D: "",             // Placeholder for the 3D model URL.
     };
     const result = await db.collection('clothings').insertOne(newItem);
     const itemId = result.insertedId;
 
-    // Set up file paths.
-    const tempImagePath = path.join('/tmp', `${body.clothingID}.png`);
-    const instantMeshScript = path.join(process.cwd(), 'instantmesh', 'run_instantmesh.py');
-    const tempOutputMeshPath = path.join('/tmp', `${body.clothingID}.obj`);
+    // Determine temporary file path using the system temporary directory.
+    const tempDir = os.tmpdir();
+    const tempImagePath = path.join(tempDir, `${body.clothingID}.png`);
+    console.log("Temporary image path:", tempImagePath);
 
-    // Spawn the Python process using the virtual environment's Python executable.
+    // Download the image locally.
+    await downloadImage(body.imageURL, tempImagePath);
+
+    // *********************
+    // CLASSIFICATION STEP
+    // *********************
+    // Build absolute path to your classifier script (assuming it's in "classifier/predict.py").
+    const classifierScript = path.join(process.cwd(), 'classifier', 'predict.py');
+    console.log("Classifier script path:", classifierScript);
+
+    // Use the virtual environment's Python executable.
     const pythonExecutable = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
-    console.log("Using Python executable:", pythonExecutable);
+    console.log("Using Python executable for classification:", pythonExecutable);
 
-    const env = {
-      ...process.env,
-      VIRTUAL_ENV: path.join(process.cwd(), '.venv'),
-      PATH: `${path.join(process.cwd(), '.venv', 'Scripts')};${process.env.PATH}`,
-    };
-
-    const pythonProcess = spawn(pythonExecutable, [
-      instantMeshScript,
-      '--input', tempImagePath,
-      '--config', path.join(process.cwd(), 'configs', 'instant-mesh-large.yaml'),
-      '--ckpt', path.join(process.cwd(), 'ckpts', 'instant_mesh_large.ckpt'),
-      '--output', tempOutputMeshPath,
-    ], { env });
-
-    pythonProcess.stdout.on('data', (data) => {
-      console.log(`InstantMesh stdout: ${data}`);
-    });
-    pythonProcess.stderr.on('data', (data) => {
-      console.error(`InstantMesh stderr: ${data}`);
+    // Spawn the classifier process.
+    const classifierProcess = spawn(pythonExecutable, [classifierScript, tempImagePath], {
+      env: {
+        ...process.env,
+        VIRTUAL_ENV: path.join(process.cwd(), '.venv'),
+        PATH: `${path.join(process.cwd(), '.venv', 'Scripts')};${process.env.PATH}`,
+      },
     });
 
-    // Wait for the Python process to finish.
-    await new Promise((resolve, reject) => {
-      pythonProcess.on('close', (code) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`InstantMesh process exited with code ${code}`));
-        }
-      });
+    let classifierStdout = "";
+    let classifierStderr = "";
+    classifierProcess.stdout.on("data", (data) => {
+      classifierStdout += data.toString();
     });
-
-    // Move the generated mesh file from /tmp to a permanent location in public/models.
-    const modelsDir = path.join(process.cwd(), 'public', 'models');
-    if (!fs.existsSync(modelsDir)) {
-      fs.mkdirSync(modelsDir, { recursive: true });
+    classifierProcess.stderr.on("data", (data) => {
+      classifierStderr += data.toString();
+    });
+    const classifierExitCode = await new Promise((resolve) => {
+      classifierProcess.on("close", resolve);
+    });
+    if (classifierExitCode !== 0) {
+      console.error("Classifier stderr:", classifierStderr);
+      throw new Error(`Classifier process exited with code ${classifierExitCode}. Stderr: ${classifierStderr}`);
     }
-    const finalMeshPath = path.join(modelsDir, `${body.clothingID}.obj`);
-    fs.renameSync(tempOutputMeshPath, finalMeshPath);
+    // Parse classifier output (expecting a line like: "Predicted label: Tee").
+    const predictedLabelMatch = classifierStdout.match(/Predicted label:\s*(.+)/);
+    if (!predictedLabelMatch) {
+      throw new Error("Could not parse predicted label from classifier output.");
+    }
+    const predictedLabel = predictedLabelMatch[1].trim();
+    console.log("Predicted label:", predictedLabel);
 
-    // Construct a URL that points to the newly saved model.
-    const modelUrl = `/models/${body.clothingID}.obj`;
-
-    // Update the MongoDB document with the generated mesh URL.
+    // Update the document with the predicted category.
     await db.collection('clothings').updateOne(
       { _id: itemId },
-      { $set: { asset3D: modelUrl } }
+      { $set: { category: predictedLabel } }
     );
 
-    return new NextResponse(JSON.stringify({ message: 'Clothing item processed', id: itemId, mesh: modelUrl }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    // Optionally, delete the temporary image file.
+    fs.unlinkSync(tempImagePath);
+
+    return new NextResponse(
+      JSON.stringify({
+        message: "Clothing item processed",
+        id: itemId,
+        predictedCategory: predictedLabel,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
-    console.error('Error processing clothing item:', error);
-    return new NextResponse(JSON.stringify({ message: 'Error processing clothing item', error: error.message }), { status: 500 });
+    console.error("Error processing clothing item:", error);
+    return new NextResponse(
+      JSON.stringify({ message: "Error processing clothing item", error: error.message }),
+      { status: 500 }
+    );
   }
 }

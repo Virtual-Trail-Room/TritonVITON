@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import SideMenu from "../components/SideMenu";
 import VideoFeed from "../components/VideoFeed";
 import ClothingList from "../components/ClothingList";
-import AddClothingItem from "../components/AddClothingItem";
+import AddClothingModal from "../components/AddClothingModal";
 import { useHandedness } from "../contexts/HandednessContext";
 
 export default function Home() {
@@ -16,12 +16,12 @@ export default function Home() {
     click: false,
     dragging: false,
   });
-
-  // Get handedness value from context.
+  // State to control the visibility of the Add Clothing modal.
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const { isLeftHanded } = useHandedness();
 
-  // Update initial cursor position on client.
   useEffect(() => {
+    // On client-side, update the initial cursor state.
     setCursor({
       x: window.innerWidth / 2,
       y: window.innerHeight / 2,
@@ -69,33 +69,52 @@ export default function Home() {
       />
 
       <div className="relative h-screen w-screen overflow-hidden">
-        <VideoFeed onCursorUpdate={handleCursorUpdate} onSimulatedClick={handleSimulatedClick} />
+        <VideoFeed
+          onCursorUpdate={handleCursorUpdate}
+          onSimulatedClick={handleSimulatedClick}
+        />
 
-        {/* Layout for Left-Handed vs. Right-Handed */}
         {isLeftHanded ? (
+          // Layout for Left-Handed mode: ClothingList on left; SideMenu on right.
           <>
-            {/* Left-Handed Layout: Clothing list and AddClothingItem on left; SideMenu on right */}
             <div className="absolute top-0 left-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
               <ClothingList selectedCategory={selectedCategory} cursor={cursor} />
-              <AddClothingItem />
             </div>
             <div className="absolute top-0 right-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
-              <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
+              <SideMenu
+                selectedCategory={selectedCategory}
+                onCategorySelect={handleCategorySelect}
+              />
             </div>
           </>
         ) : (
+          // Layout for Right-Handed mode: SideMenu on left; ClothingList on right.
           <>
-            {/* Right-Handed Layout: SideMenu on left; ClothingList and AddClothingItem on right */}
             <div className="absolute top-0 left-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
-              <SideMenu selectedCategory={selectedCategory} onCategorySelect={handleCategorySelect} />
+              <SideMenu
+                selectedCategory={selectedCategory}
+                onCategorySelect={handleCategorySelect}
+              />
             </div>
             <div className="absolute top-0 right-0 h-screen w-[300px] bg-black bg-opacity-60 overflow-y-auto">
               <ClothingList selectedCategory={selectedCategory} cursor={cursor} />
-              <AddClothingItem />
             </div>
           </>
         )}
+
+        {/* “Add Clothing” Button positioned on top of the video */}
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="absolute bottom-8 right-8 px-6 py-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition"
+        >
+          Add Clothing
+        </button>
       </div>
+
+      {/* Conditionally render the AddClothingModal only when isAddModalOpen is true */}
+      {isAddModalOpen && (
+        <AddClothingModal onClose={() => setIsAddModalOpen(false)} />
+      )}
     </>
   );
 }

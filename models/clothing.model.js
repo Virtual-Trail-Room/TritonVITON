@@ -9,7 +9,7 @@ const clothingSchema = new Schema({
     enum: ['Blouses', 'Cardigans', 'Jackets', 'Sweaters', 'Tanks', 'Tees', 'Tops', 'Jeans', 'Shorts', 'Skirts', 'Dress']
   },
   image2D: { type: String, required: true },
-  asset3D: { type: String, required: true }
+  //asset3D: { type: String, required: true }
 }, {
   timestamps: true,
 });

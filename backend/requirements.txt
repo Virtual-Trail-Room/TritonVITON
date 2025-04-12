@@ -36,3 +36,4 @@ xatlas
 trimesh
 opencv-python
 nvdiffrast
+uuid
