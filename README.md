@@ -7,6 +7,7 @@ First, we want to install all the npm requirements:
 npm install
 
 ```
+Make sure to unzip the "clothing_classifier2-0-1.pth.zip" file and place the "clothing_classifier2-0-1.pth" file into the project root directory. 
 
 Next, we can run the actual development server:
 
