@@ -37,3 +37,9 @@ Thumbs.db
 
 # Additional common ignores (optional)
 coverage/
+
+# Ignore the clothing classifier weights file
+classifier/clothing_classifier2-0-1.pth
+
+# Ignore the InstantMesh folder
+instantmesh/
