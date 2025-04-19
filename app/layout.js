@@ -1,7 +1,6 @@
 import "../src/app/globals.css";
 import { Geist, Geist_Mono } from "next/font/google";
 import HeaderBar from "../components/HeaderBar";
-// ↓ Remove this import
 // import { HandednessProvider } from "../contexts/HandednessContext";
 
 const geistSans = Geist({

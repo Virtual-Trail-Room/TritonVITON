@@ -1,75 +1,74 @@
+// components/HeaderBar.js
 "use client";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import DarkModeToggle from "./DarkModeToggle";
-import { useHandedness } from "../contexts/HandednessContext";
+
 import { useState } from "react";
+import Link from "next/link";
+import DarkModeToggle from "./DarkModeToggle";
 import AddClothingModal from "./AddClothingModal";
 
 export default function HeaderBar() {
-  const pathname = usePathname();
-  // Get handedness state and toggle function from context.
-  const { isLeftHanded, toggleHandedness } = useHandedness();
-  // Local state for showing the modal to add a clothing item.
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Determine if we are on the info page.
-  const isInfoPage = pathname === "/info";
-    
-  // Toggle the Add Clothing modal.
   const toggleModal = () => setIsModalOpen((prev) => !prev);
 
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-white shadow-md dark:bg-gray-800">
-      {/* Title: on the info page, the title is clickable */}
-      {isInfoPage ? (
-        <Link href="/" className="text-2xl font-bold text-gray-900 dark:text-white">
+    <>
+      <header
+        className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between
+                   px-4 py-3 bg-white shadow-md dark:bg-gray-800"
+      >
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           TritonVITON
-        </Link>
-      ) : (
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">TritonVITON</h1>
-      )}
+        </h1>
+        <div className="flex items-center gap-4">
+          <DarkModeToggle />
 
-      {/* Controls */}
-      <div className="flex items-center gap-4">
-        <DarkModeToggle />
-        {/* These additional buttons appear only when not on the info page */}
-        {!isInfoPage && (
-          <>
+          <Link
+            href="/info"
+            className="flex items-center justify-center w-10 h-10
+                       rounded-full bg-blue-500 text-white hover:bg-blue-600 transition"
+            aria-label="Project Information"
+          >
+            i
+          </Link>
 
-            {/* Information Button */}
-            <Link href="/info" aria-label="Project Information">
-              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition">
-                i
-              </span>
-            </Link>
-            {/* Add Clothing Item Button */}
-            <button
-              onClick={toggleModal}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
-              aria-label="Add new clothing item"
+          <Link
+            href="https://github.com/Virtual-Trail-Room/TritonVITON"
+            target="_blank"
+            className="flex items-center justify-center w-10 h-10
+                       rounded-full bg-gray-800 text-white hover:bg-gray-900 transition"
+            aria-label="View source on GitHub"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-6 h-6"
+              fill="currentColor"
+              viewBox="0 0 24 24"
             >
-              Add Item
-            </button>
+              {/* GitHub “octocat” path */}
+              <path d="M12 .297C5.373.297 0 5.67 0 12.297c0 5.292 3.438 9.787 8.205 11.387.6.113.82-.258.82-.577
+         0-.285-.01-1.04-.016-2.04-3.338.725-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.757-1.333-1.757
+         -1.089-.745.083-.73.083-.73 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997
+         .108-.776.418-1.305.76-1.605-2.665-.303-5.466-1.334-5.466-5.93 0-1.31.47-2.382 1.235-3.222
+         -.123-.303-.536-1.523.117-3.176 0 0 1.008-.323 3.301 1.23.957-.266 1.984-.399 3.005-.404
+         1.02.005 2.048.138 3.006.404 2.292-1.553 3.297-1.23 3.297-1.23.655 1.653.242 2.873.119 3.176
+         .77.84 1.233 1.912 1.233 3.222 0 4.61-2.804 5.625-5.475 5.921.43.372.824 1.102.824 2.222
+         0 1.606-.015 2.896-.015 3.293 0 .32.216.694.825.576C20.565 22.084 24 17.588 24 12.297
+         24 5.67 18.627.297 12 .297z" />
+            </svg>
+          </Link>
 
-            {/* Code Button (GitHub link) */}
-            <a
-              href="https://github.com/Virtual-Trail-Room/TritonVITON" // Replace with your actual repo URL.
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="View Code on GitHub"
-              className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-800 text-white hover:bg-gray-700 transition"
-            >
-              {/* GitHub SVG Icon */}
-              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" className="w-6 h-6" viewBox="0 0 16 16">
-                <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.075.55-.175.55-.388 0-.19-.007-.693-.01-1.36-2.226.483-2.695-1.073-2.695-1.073-.364-.924-.89-1.17-.89-1.17-.727-.497.055-.487.055-.487.804.057 1.227.826 1.227.826.716 1.225 1.876.872 2.335.667.073-.518.28-.872.508-1.073-1.777-.202-3.644-.888-3.644-3.95 0-.872.311-1.586.823-2.145-.083-.202-.357-1.016.078-2.12 0 0 .67-.214 2.2.82a7.65 7.65 0 0 1 2-.27 7.65 7.65 0 0 1 2 .27c1.53-1.034 2.2-.82 2.2-.82.435 1.104.161 1.918.08 2.12.513.559.823 1.273.823 2.145 0 3.07-1.87 3.745-3.65 3.943.288.248.543.737.543 1.485 0 1.073-.01 1.94-.01 2.203 0 .215.15.466.55.387A8.003 8.003 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
-              </svg>
-            </a>
-          </>
-        )}
-      </div>
-      {/* Render the AddClothingModal when isModalOpen is true */}
+          {/* Add Item button */}
+          <button
+            onClick={toggleModal}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
+            aria-label="Add new clothing item"
+          >
+            Add Item
+          </button>
+        </div>
+      </header>
+
       {isModalOpen && <AddClothingModal onClose={toggleModal} />}
-    </header>
+    </>
   );
 }

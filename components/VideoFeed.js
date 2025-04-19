@@ -1,54 +1,45 @@
 "use client";
+
 import { useRef, useEffect, useState } from "react";
 import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 
-// --- Mediapipe HandLandmarker Configurations ---
+// Hand landmark connections
 const HAND_CONNECTIONS = [
-  [0, 1], [1, 2], [2, 3], [3, 4],
-  [0, 5], [5, 6], [6, 7], [7, 8],
-  [5, 9], [9, 10], [10, 11], [11, 12],
-  [9, 13], [13, 14], [14, 15], [15, 16],
-  [13, 17], [17, 18], [18, 19], [19, 20],
-  [0, 17],
+  [0,1],[1,2],[2,3],[3,4],
+  [0,5],[5,6],[6,7],[7,8],
+  [5,9],[9,10],[10,11],[11,12],
+  [9,13],[13,14],[14,15],[15,16],
+  [13,17],[17,18],[18,19],[19,20],
+  [0,17],
 ];
 
-// --- YOLO Pose Skeleton Connections ---
-const SKELETON_CONNECTIONS = [
-  [1, 2], [1, 3], [2, 4], [3, 5],
-  [6, 7], [6, 8], [7, 9], [8, 10], [9, 11],
-  [12, 13], [12, 14], [13, 15], [14, 16], [15, 17],
-  [6, 12], [7, 13],
-];
+const CLICK_THRESHOLD = 0.05;
+const FIST_THRESHOLD  = 0.1;
+const CLICK_DEBOUNCE  = 1000; // ms
 
-// Thresholds for gestures
-const CLICK_GESTURE_THRESHOLD = 0.05;
-const FIST_GESTURE_THRESHOLD = 0.1;
-const CLICK_DEBOUNCE = 1000; // ms
-
-export default function VideoFeed({ onCursorUpdate, onSimulatedClick, enableYolo }) {
-  const videoRef = useRef(null);
+export default function VideoFeed({
+  onCursorUpdate,
+  onSimulatedClick,
+  enableYolo = true,
+}) {
+  const videoRef      = useRef(null);
   const canvasHandRef = useRef(null);
-  const canvasYoloRef = useRef(null);
-  const globalCursorRef = useRef(null);
-  const lastCursorPosRef = useRef({ x: 0, y: 0 });
-  const yoloKeypointsRef = useRef(null);
+  const cursorRef     = useRef(null);
+
+  const lastClickTime = useRef(0);
+  const running       = useRef(false);
+  const rafId         = useRef(null);
+
   const [handLandmarker, setHandLandmarker] = useState(null);
-  const [webcamOn, setWebcamOn] = useState(false);
-  const lastClickTimeRef = useRef(0);
+  const [webcamOn, setWebcamOn]             = useState(false);
 
+  // 1) Load the Mediapipe model
   useEffect(() => {
-    lastCursorPosRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-  }, []);
-
-  // --- Initialize HandLandmarker ---
-  useEffect(() => {
-    if (!videoRef.current) return;
-    async function createLandmarker() {
-      try {
-        const vision = await FilesetResolver.forVisionTasks(
-          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
-        );
-        const model = await HandLandmarker.createFromOptions(vision, {
+    FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+    )
+      .then(resolver =>
+        HandLandmarker.createFromOptions(resolver, {
           baseOptions: {
             modelAssetPath:
               "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
@@ -56,287 +47,176 @@ export default function VideoFeed({ onCursorUpdate, onSimulatedClick, enableYolo
           },
           runningMode: "VIDEO",
           numHands: 1,
-        });
-        console.log("HandLandmarker loaded.");
-        setHandLandmarker(model);
-      } catch (error) {
-        console.error("Error creating HandLandmarker:", error);
-      }
-    }
-    createLandmarker();
+        })
+      )
+      .then(setHandLandmarker)
+      .catch(console.error);
   }, []);
 
-  // --- Enable Webcam ---
+  // 2) Turn on webcam once
   useEffect(() => {
-    async function enableWebcam() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => videoRef.current.play();
-          console.log("Webcam stream acquired.");
-        }
-      } catch (error) {
-        console.error("Error accessing webcam:", error);
-      }
-    }
-    if (!webcamOn) {
-      setWebcamOn(true);
-      enableWebcam();
-    }
+    if (webcamOn) return;
+    setWebcamOn(true);
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then(stream => {
+        const v = videoRef.current;
+        v.srcObject = stream;
+        v.play();
+      })
+      .catch(console.error);
   }, [webcamOn]);
 
-  // --- Initialize Global Cursor ---
+  // 3) Style the custom cursor
   useEffect(() => {
-    if (globalCursorRef.current) {
-      Object.assign(globalCursorRef.current.style, {
-        width: "40px",
-        height: "40px",
-        backgroundImage: "url('/cursor-hover.png')",
-        backgroundSize: "cover",
-        backgroundRepeat: "no-repeat",
-        position: "fixed",
-        zIndex: "30",
-        pointerEvents: "none",
-        left: `${lastCursorPosRef.current.x}px`,
-        top: `${lastCursorPosRef.current.y}px`,
-        transform: "translate(-50%, -50%)",
-      });
-      console.log("Global custom cursor initialized.");
-    }
+    const c = cursorRef.current;
+    if (!c) return;
+    Object.assign(c.style, {
+      display:         "block",
+      width:           "40px",
+      height:          "40px",
+      backgroundImage: "url('/cursor-hover.png')",
+      backgroundSize:  "cover",
+      backgroundRepeat:"no-repeat",
+      position:        "fixed",
+      pointerEvents:   "none",
+      transform:       "translate(-50%, -50%)",
+      zIndex:          "30",
+    });
   }, []);
 
-  // --- Hand Detection Loop ---
+  // 4) Resize the hand‑canvas once the video dimensions are known
   useEffect(() => {
-    async function processHandFrame() {
-      const video = videoRef.current;
-      if (!video) {
-        requestAnimationFrame(processHandFrame);
+    const v = videoRef.current;
+    const c = canvasHandRef.current;
+    if (!v || !c) return;
+    v.onloadedmetadata = () => {
+      c.width  = v.videoWidth;
+      c.height = v.videoHeight;
+    };
+  }, []);
+
+  // 5) Main detection + draw loop
+  useEffect(() => {
+    const video  = videoRef.current;
+    const canvas = canvasHandRef.current;
+    if (!video || !canvas) return;
+    const ctx   = canvas.getContext("2d");
+    const off   = document.createElement("canvas");
+    const SCALE = 0.5;
+
+    async function frame() {
+      if (!handLandmarker || video.videoWidth === 0) {
+        rafId.current = requestAnimationFrame(frame);
         return;
       }
-      const { videoWidth, videoHeight } = video;
-      if (videoWidth === 0 || videoHeight === 0) {
-        requestAnimationFrame(processHandFrame);
+      if (running.current) {
+        rafId.current = requestAnimationFrame(frame);
         return;
       }
-      const canvas = canvasHandRef.current;
-      const ctx = canvas.getContext("2d");
-      canvas.width = videoWidth;
-      canvas.height = videoHeight;
+      running.current = true;
+
+      // clear previous drawings
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const startTimeMs = performance.now();
-      if (handLandmarker) {
-        try {
-          const handResults = await handLandmarker.detectForVideo(video, startTimeMs);
-          if (handResults.landmarks && handResults.landmarks.length > 0) {
-            handResults.landmarks.forEach((landmarks) => {
-              if (window.drawConnectors && window.drawLandmarks) {
-                window.drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 2 });
-                window.drawLandmarks(ctx, landmarks, { color: "#FF0000", lineWidth: 1 });
-              }
-              const palmIndices = [0, 5, 9, 13, 17];
-              let sumX = 0, sumY = 0;
-              palmIndices.forEach(i => {
-                sumX += landmarks[i].x;
-                sumY += landmarks[i].y;
-              });
-              const palmCenterX = sumX / palmIndices.length;
-              const palmCenterY = sumY / palmIndices.length;
-              const globalX = palmCenterX * window.innerWidth;
-              const globalY = palmCenterY * window.innerHeight;
-              lastCursorPosRef.current = { x: globalX, y: globalY };
-              if (globalCursorRef.current) {
-                globalCursorRef.current.style.left = `${globalX}px`;
-                globalCursorRef.current.style.top = `${globalY}px`;
-              }
-              const thumbTip = landmarks[4];
-              const indexTip = landmarks[8];
-              const middleTip = landmarks[12];
-              const distThumbIndex = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
-              const distThumbMiddle = Math.hypot(thumbTip.x - middleTip.x, thumbTip.y - middleTip.y);
-              const distIndexMiddle = Math.hypot(indexTip.x - middleTip.x, indexTip.y - middleTip.y);
-              const clickGesture =
-                distThumbIndex < CLICK_GESTURE_THRESHOLD &&
-                distThumbMiddle < CLICK_GESTURE_THRESHOLD &&
-                distIndexMiddle < CLICK_GESTURE_THRESHOLD;
-              const fingertipIndices = [4, 8, 12, 16, 20];
-              let totalFistDist = 0, count = 0;
-              fingertipIndices.forEach(i => {
-                const kp = landmarks[i];
-                if (kp) {
-                  const dx = kp.x - palmCenterX;
-                  const dy = kp.y - palmCenterY;
-                  totalFistDist += Math.hypot(dx, dy);
-                  count++;
-                }
-              });
-              const avgFistDist = count > 0 ? totalFistDist / count : 1;
-              const dragGesture = avgFistDist < FIST_GESTURE_THRESHOLD;
-              if (onCursorUpdate) {
-                onCursorUpdate({ x: globalX, y: globalY, click: clickGesture, dragging: dragGesture });
-              }
-              if (clickGesture && Date.now() - lastClickTimeRef.current > CLICK_DEBOUNCE) {
-                if (globalCursorRef.current) {
-                  globalCursorRef.current.style.backgroundImage = "url('/cursor-click.png')";
-                }
-                const el = document.elementFromPoint(globalX, globalY);
-                if (el && onSimulatedClick) {
-                  onSimulatedClick(el);
-                }
-                lastClickTimeRef.current = Date.now();
-                setTimeout(() => {
-                  if (globalCursorRef.current) {
-                    globalCursorRef.current.style.backgroundImage = "url('/cursor-hover.png')";
-                  }
-                }, 200);
-              }
-            });
-          } else {
-            console.log("No hand detected. Cursor remains at:", lastCursorPosRef.current);
-          }
-        } catch (error) {
-          console.error("Error during hand detection:", error);
-        }
-      }
-      requestAnimationFrame(processHandFrame);
-    }
-    if (handLandmarker && webcamOn) {
-      processHandFrame();
-    }
-  }, [handLandmarker, webcamOn, onCursorUpdate, onSimulatedClick]);
 
-  // --- YOLO Backend Polling (if enabled) ---
-  useEffect(() => {
-    if (webcamOn && enableYolo) {
-      const intervalId = setInterval(() => {
-        const video = videoRef.current;
-        if (!video || video.videoWidth === 0 || video.videoHeight === 0) return;
-        const offscreenCanvas = document.createElement("canvas");
-        offscreenCanvas.width = video.videoWidth;
-        offscreenCanvas.height = video.videoHeight;
-        const offscreenCtx = offscreenCanvas.getContext("2d");
-        offscreenCtx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-        offscreenCanvas.toBlob(async (blob) => {
-          if (!blob) {
-            console.error("Failed to convert frame to blob.");
-            return;
-          }
-          const formData = new FormData();
-          formData.append("file", blob, "frame.jpg");
-          try {
-            const res = await fetch("http://localhost:8000/predict", {
-              method: "POST",
-              body: formData,
-            });
-            const data = await res.json();
-            console.log("YOLO backend response:", data);
-            if (data.keypoints && data.keypoints.length > 0) {
-              const keypoints = Array.isArray(data.keypoints[0][0])
-                ? data.keypoints[0]
-                : data.keypoints;
-              yoloKeypointsRef.current = keypoints;
-            } else {
-              yoloKeypointsRef.current = null;
-              console.log("No YOLO keypoints detected.");
-            }
-          } catch (error) {
-            console.error("Error sending frame to YOLO backend:", error);
-          }
-        }, "image/jpeg");
-      }, 200);
-      return () => clearInterval(intervalId);
-    }
-  }, [webcamOn, enableYolo]);
+      // draw downscaled video into offscreen
+      off.width  = canvas.width * SCALE;
+      off.height = canvas.height * SCALE;
+      const offCtx = off.getContext("2d");
+      offCtx.drawImage(video, 0, 0, off.width, off.height);
 
-  // --- YOLO Skeleton Drawing Loop ---
-  useEffect(() => {
-    function isValidKp(kp) {
-      return kp[0] !== 0 || kp[1] !== 0;
-    }
-    function drawYoloLoop() {
-      const video = videoRef.current;
-      const canvas = canvasYoloRef.current;
-      if (video && canvas) {
-        const ctx = canvas.getContext("2d");
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (yoloKeypointsRef.current) {
-          let normalized = false;
-          if (yoloKeypointsRef.current.length > 0) {
-            const [x, y] = yoloKeypointsRef.current[0];
-            if (x <= 1 && y <= 1) normalized = true;
-          }
-          yoloKeypointsRef.current.forEach((kp, i) => {
-            if (!isValidKp(kp)) return;
-            let [x, y] = kp;
-            if (normalized) {
-              x *= canvas.width;
-              y *= canvas.height;
-            }
+      try {
+        const result = await handLandmarker.detectForVideo(
+          off,
+          performance.now()
+        );
+        if (result.landmarks?.length) {
+          console.log("hands detected:", result.landmarks.length);
+          const raw = result.landmarks[0];
+          // map to main‑canvas coords
+          const pts = raw.map(pt => ({
+            x: pt.x / SCALE,
+            y: pt.y / SCALE
+          }));
+          // draw skeleton
+          ctx.strokeStyle = "#00FF00";
+          ctx.lineWidth   = 2;
+          for (let [i,j] of HAND_CONNECTIONS) {
+            const p1 = pts[i], p2 = pts[j];
             ctx.beginPath();
-            ctx.arc(x, y, 8, 0, 2 * Math.PI);
-            ctx.fillStyle = "#FF00FF";
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+          // draw keypoints
+          ctx.fillStyle = "#FF0000";
+          pts.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
             ctx.fill();
-            ctx.font = "16px Arial";
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillText(i, x + 10, y + 10);
           });
-          SKELETON_CONNECTIONS.forEach(([start, end]) => {
-            const kp1 = yoloKeypointsRef.current[start - 1];
-            const kp2 = yoloKeypointsRef.current[end - 1];
-            if (kp1 && kp2 && isValidKp(kp1) && isValidKp(kp2)) {
-              let [x1, y1] = kp1;
-              let [x2, y2] = kp2;
-              if (normalized) {
-                x1 *= canvas.width;
-                y1 *= canvas.height;
-                x2 *= canvas.width;
-                y2 *= canvas.height;
-              }
-              ctx.beginPath();
-              ctx.moveTo(x1, y1);
-              ctx.lineTo(x2, y2);
-              ctx.strokeStyle = "#FF0000";
-              ctx.lineWidth = 2;
-              ctx.stroke();
-            }
-          });
+
+          // gestures
+          const [t,i,m] = [4,8,12].map(k => raw[k]);
+          const dTI = Math.hypot(t.x-i.x, t.y-i.y);
+          const dTM = Math.hypot(t.x-m.x, t.y-m.y);
+          const dIM = Math.hypot(i.x-m.x, i.y-m.y);
+          const click = dTI<CLICK_THRESHOLD &&
+                        dTM<CLICK_THRESHOLD &&
+                        dIM<CLICK_THRESHOLD;
+          let sum=0;
+          for (let k of [4,8,12,16,20]) {
+            const dx = raw[k].x - raw[0].x;
+            const dy = raw[k].y - raw[0].y;
+            sum += Math.hypot(dx, dy);
+          }
+          const dragging = sum/5 < FIST_THRESHOLD;
+
+          // update cursor
+          const cx = raw[0].x * window.innerWidth;
+          const cy = raw[0].y * window.innerHeight;
+          cursorRef.current.style.left = `${cx}px`;
+          cursorRef.current.style.top  = `${cy}px`;
+          onCursorUpdate?.({ x:cx, y:cy, click, dragging });
+
+          if (click && Date.now()-lastClickTime.current>CLICK_DEBOUNCE) {
+            cursorRef.current.style.backgroundImage = "url('/cursor-click.png')";
+            onSimulatedClick?.(document.elementFromPoint(cx,cy));
+            lastClickTime.current = Date.now();
+            setTimeout(() => {
+              cursorRef.current.style.backgroundImage = "url('/cursor-hover.png')";
+            }, 200);
+          }
         }
+      } catch(err) {
+        console.error("handLandmarker error:", err);
       }
-      requestAnimationFrame(drawYoloLoop);
+
+      running.current = false;
+      rafId.current   = requestAnimationFrame(frame);
     }
-    if (webcamOn) {
-      drawYoloLoop();
-    }
-  }, [webcamOn]);
+
+    if (webcamOn) rafId.current = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(rafId.current);
+  }, [handLandmarker, webcamOn]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="absolute inset-0">
+      {/* 1️⃣ Single video */}
       <video
         ref={videoRef}
-        autoPlay
         muted
         playsInline
-        className="w-full h-full object-cover rounded-lg shadow-2xl"
-        style={{ position: "relative", zIndex: 0 }}
+        autoPlay
+        className="absolute inset-0 w-full h-full object-cover z-0"
       />
+      {/* 2️⃣ Hand overlay */}
       <canvas
         ref={canvasHandRef}
-        className="absolute top-0 left-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 10 }}
+        className="absolute inset-0 pointer-events-none z-10"
       />
-      <canvas
-        ref={canvasYoloRef}
-        className="absolute top-0 left-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 20 }}
-      />
-      <div
-        id="globalCursor"
-        ref={globalCursorRef}
-        className="fixed pointer-events-none"
-        style={{ transform: "translate(-50%, -50%)", zIndex: 30 }}
-      ></div>
+      {/* 3️⃣ Custom cursor */}
+      <div ref={cursorRef} />
     </div>
   );
 }
