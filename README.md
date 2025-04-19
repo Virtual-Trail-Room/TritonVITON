@@ -12,6 +12,10 @@ Make sure to unzip the "clothing_classifier2-0-1.pth.zip" file and place the "cl
 Next, we can run the actual development server:
 
 ```bash
+
+[If on Git Bash like I am]
+source .venv/Scripts/activate
+
 npm run dev [for front-end and back-end]
 
 uvicorn main:app --reload [for Python back-end portion]
