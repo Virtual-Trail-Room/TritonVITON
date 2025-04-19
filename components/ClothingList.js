@@ -12,7 +12,7 @@ export default function ClothingList({ selectedCategory, cursor }) {
       try {
         const res = await fetch("/api/clothing");
         const data = await res.json();
-        console.log("Fetched data:", data);
+        //console.log("Fetched data:", data);
         // Ensure that the API returned an array.
         if (!Array.isArray(data)) {
           console.error("Fetched data is not an array:", data);

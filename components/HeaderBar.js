@@ -36,13 +36,6 @@ export default function HeaderBar() {
         {/* These additional buttons appear only when not on the info page */}
         {!isInfoPage && (
           <>
-            <button
-              onClick={toggleHandedness}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition"
-              aria-label="Toggle handedness"
-            >
-              {isLeftHanded ? "Right-handed Users" : "Left-handed Users"}
-            </button>
 
             {/* Information Button */}
             <Link href="/info" aria-label="Project Information">
