@@ -43,3 +43,8 @@ classifier/clothing_classifier2-0-1.pth
 
 # Ignore the InstantMesh folder
 instantmesh/
+
+# Model weights (too large for GitHub, host separately)
+backend/models/
+backend/models.zip
+backend/openpose/checkpoint_iter_370000.pth

@@ -1,39 +1,22 @@
-mediapipe
-opencv-python
-accelerate
-torch
-numpy
-pillow
-transformers
-torchvision
-pycocotools
+# Upgrade tools
+pip==20.3.3
+setuptools==65.5.0
+wheel==0.36.2
+
+# PyTorch with CUDA 12.4
+#torch==*+cu124
+#torchvision==*+cu124
+#torchaudio==*+cu124
+#--extra-index-url https://download.pytorch.org/whl/cu124
+
+# Core dependencies
+opencv-python==4.11.0.86
+matplotlib==3.7.5
+tdqm==0.0.1
+PyYAML==6.0.2
+pillow==10.4.0
+pandas==2.0.3
+urllib3==2.2.3
+ultralytics==8.3.133
+ninja
 fastapi
-uvicorn
-ultralytics
-<<<<<<< HEAD
-huggingface-hub
-einops
-omegaconf
-torchmetrics
-webdataset
-accelerate
-tensorboard
-PyMCubes
-trimesh
-rembg
-transformers
-diffusers
-bitsandbytes
-imageio[ffmpeg]
-xatlas
-plyfile
-torchaudio
-xformers
-Ninja
-git+https://github.com/NVlabs/nvdiffrast/
-onnxruntime
-xatlas
-trimesh
-opencv-python
-nvdiffrast
-uuid

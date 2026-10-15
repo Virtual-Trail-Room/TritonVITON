@@ -56,6 +56,12 @@ export default function HeaderBar() {
          24 5.67 18.627.297 12 .297z" />
             </svg>
           </Link>
+           {/* NEW – jump to the live try-on room */}
+          <Link href="/tryon"
+                className="px-4 py-2 rounded bg-blue-600 text-white
+                           hover:bg-blue-700 transition">
+            Try-On Room
+          </Link>
 
           {/* Add Item button */}
           <button

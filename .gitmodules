@@ -1,0 +1,3 @@
+[submodule "cloth_wrapping"]
+	path = cloth_wrapping
+	url = https://github.com/Virtual-Trail-Room/Cloth_Wrapping.git

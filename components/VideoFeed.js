@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, forwardRef, useImperativeHandle } from "react";
 import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 
 // Hand landmark connections
@@ -8,7 +8,7 @@ const HAND_CONNECTIONS = [
   [0,1],[1,2],[2,3],[3,4],
   [0,5],[5,6],[6,7],[7,8],
   [5,9],[9,10],[10,11],[11,12],
-  [9,13],[13,14],[14,15],[15,16],
+  [9,13],[13,14],[14,15],[15,16], 
   [13,17],[17,18],[18,19],[19,20],
   [0,17],
 ];
@@ -17,14 +17,17 @@ const CLICK_THRESHOLD = 0.05;
 const FIST_THRESHOLD  = 0.1;
 const CLICK_DEBOUNCE  = 1000; // ms
 
-export default function VideoFeed({
+const VideoFeed = forwardRef(function VideoFeed({
   onCursorUpdate,
   onSimulatedClick,
   enableYolo = true,
-}) {
+  processedFrame,
+}, ref) {
   const videoRef      = useRef(null);
   const canvasHandRef = useRef(null);
   const cursorRef     = useRef(null);
+  const outputCanvasRef = useRef(null);   // processed frame layer
+
 
   const lastClickTime = useRef(0);
   const running       = useRef(false);
@@ -32,6 +35,22 @@ export default function VideoFeed({
 
   const [handLandmarker, setHandLandmarker] = useState(null);
   const [webcamOn, setWebcamOn]             = useState(false);
+
+  /** expose <video> element to parent via ref */
+  useImperativeHandle(ref, () => videoRef.current);
+
+  /* draw latest processed frame whenever parent updates it */
+  useEffect(() => {
+    if (!processedFrame) return;
+    const img = new Image();
+    img.onload = () => {
+      const ctx = outputCanvasRef.current?.getContext("2d");
+      if (!ctx) return;
+      ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+      ctx.drawImage(img, 0, 0, ctx.canvas.width, ctx.canvas.height);
+    };
+    img.src = processedFrame;
+  }, [processedFrame]);
 
   // 1) Load the Mediapipe model
   useEffect(() => {
@@ -90,12 +109,15 @@ export default function VideoFeed({
     const v = videoRef.current;
     const c = canvasHandRef.current;
     if (!v || !c) return;
-    v.onloadedmetadata = () => {
-      c.width  = v.videoWidth;
-      c.height = v.videoHeight;
-    };
+    function resize() {
+      canvasHandRef.current.width  = videoRef.current.videoWidth;
+      canvasHandRef.current.height = videoRef.current.videoHeight;
+      outputCanvasRef.current.width  = videoRef.current.videoWidth;
+      outputCanvasRef.current.height = videoRef.current.videoHeight;
+    }
+    v.addEventListener("loadedmetadata", resize, { once: true });
+    return () => v.removeEventListener("loadedmetadata", resize);
   }, []);
-
   // 5) Main detection + draw loop
   useEffect(() => {
     const video  = videoRef.current;
@@ -215,8 +237,14 @@ export default function VideoFeed({
         ref={canvasHandRef}
         className="absolute inset-0 pointer-events-none z-10"
       />
+      {/* 3️⃣ processed-output layer (same size) */}
+      <canvas
+        ref={outputCanvasRef}
+        className="absolute inset-0 pointer-events-none z-20"
+        />
       {/* 3️⃣ Custom cursor */}
       <div ref={cursorRef} />
     </div>
   );
-}
+});
+export default VideoFeed;
