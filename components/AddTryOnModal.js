@@ -55,7 +55,7 @@ export default function AddTryOnModal({ onClose }) {
     window.__selectedClothB64 = null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed in`set-0 z-50 flex items-center justify-center">
       {/* backdrop */}
       <div
         onClick={busy ? undefined : onClose}
